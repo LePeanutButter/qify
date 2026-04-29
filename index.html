@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Qify</title>
+  <link rel="icon" type="image/png" href="img/qify-icon.png">
   <script type="module" src="/src/main.ts"></script>
   <!-- External CSS for better organization -->
   <link rel="stylesheet" href="css/styles.css">
@@ -10,7 +11,7 @@
 <body>
 
 <div class="header">
-  <span>Qify</span>
+  <img src="img/qify-header.png" alt="Qify Logo" class="logo" height="50">
   <div>
     <span id="status" class="status">Ready</span>
     <button onclick="toggleExamples()">Examples ▼</button>
@@ -69,4 +70,15 @@ attribute PerformanceCheckout {
 </div>
 
 </body>
+<script>
+  document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+  });
+
+  document.addEventListener('dragstart', function(e) {
+    if (e.target.tagName === 'IMG') {
+      e.preventDefault();
+    }
+  });
+</script>
 </html>
