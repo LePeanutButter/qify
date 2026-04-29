@@ -22,7 +22,12 @@ export default [
       globals: {
         console: 'readonly',
         document: 'readonly',
-        navigator: 'readonly'
+        navigator: 'readonly',
+        window: 'readonly',
+        btoa: 'readonly',
+        Image: 'readonly',
+        setTimeout: 'readonly',
+        fetch: 'readonly'
       }
     },
     plugins: {

@@ -273,11 +273,11 @@ export class DSLParser {
     const children: ASTNode[] = [];
 
     const scenarioParts = [
-      ['KEYWORD_SOURCE', () => this.parseSourceDeclaration()],
-      ['KEYWORD_STIMULUS', () => this.parseStimulusDeclaration()],
-      ['KEYWORD_ENVIRONMENT', () => this.parseEnvironmentDeclaration()],
-      ['KEYWORD_RESPONSE', () => this.parseResponseDeclaration()],
-      ['KEYWORD_MEASURE', () => this.parseMeasureDeclaration()]
+      ['KEYWORD_SOURCE', (): ASTNode | null => this.parseSourceDeclaration()],
+      ['KEYWORD_STIMULUS', (): ASTNode | null => this.parseStimulusDeclaration()],
+      ['KEYWORD_ENVIRONMENT', (): ASTNode | null => this.parseEnvironmentDeclaration()],
+      ['KEYWORD_RESPONSE', (): ASTNode | null => this.parseResponseDeclaration()],
+      ['KEYWORD_MEASURE', (): ASTNode | null => this.parseMeasureDeclaration()]
     ] as const;
 
     for (const [keyword, parseDeclaration] of scenarioParts) {

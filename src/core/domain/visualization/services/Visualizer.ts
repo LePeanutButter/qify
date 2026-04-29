@@ -1,3 +1,5 @@
+/// <reference lib="dom" />
+
 /**
  * TypeScript Visualizer for Quality Attribute DSL
  * Handles canvas-based visualization of DSL programs
@@ -276,13 +278,13 @@ export class DSLVisualizer {
     if (!this.renderTarget || !this.currentProgram) return;
 
     const hideInfo = /\bhideInfo\b/i.exec(this.currentDSLText) !== null;
-    const systemMatch = /system\s+([A-Za-z_]\w*)/i.exec(this.currentDSLText);
+    const systemMatch = /system\s+(\w+)/i.exec(this.currentDSLText);
     const systemName = systemMatch?.[1] ?? this.currentProgram.system.name;
     const currentDate = new Date().toLocaleDateString('es-ES');
     const attributeCount = this.currentProgram.allAttributes.length;
     const currentAttribute = this.getCurrentAttribute();
 
-    const attributeMatches = Array.from(this.currentDSLText.matchAll(/attribute\s+([A-Za-z_]\w*)/g));
+    const attributeMatches = Array.from(this.currentDSLText.matchAll(/attribute\s+(\w+)/g));
     const attributeName = currentAttribute
       ? this.escapeHtml(attributeMatches[this.currentAttributeIndex]?.[1] ?? currentAttribute.name)
       : '';
@@ -738,20 +740,36 @@ export class DSLVisualizer {
   async exportPNG(): Promise<string> {
     const svgString = this.exportSVG();
 
-    const diagramTemplate = this.renderTarget?.querySelector('.diagram-template');
-    const rect = diagramTemplate?.getBoundingClientRect();
+    // Get the complete template size for PNG export
+    const diagramTemplate = this.renderTarget?.querySelector('.diagram-template') as HTMLElement;
+    if (!diagramTemplate) {
+      return this.canvas.toDataURL('image/png');
+    }
+    
+    // Apply transform: translate(0, 0) to reset positioning
+    const originalTransform = diagramTemplate.style.transform;
+    diagramTemplate.style.transform = 'translate(0, 0)';
+    // Force reflow by accessing offsetHeight
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    diagramTemplate.offsetHeight;
+    
+    const rect = diagramTemplate.getBoundingClientRect();
     const scale  = 2;
-    const width  = Math.max(1200, rect?.width  ?? 1200) * scale;
-    const height = Math.max(800,  rect?.height ?? 800)  * scale;
+    const width = Math.max(400, rect.width) * scale;
+    const height = Math.max(300, rect.height) * scale;
+    
+    // Restore original transform
+    diagramTemplate.style.transform = originalTransform;
 
     // Encode SVG as a base64 data URL to avoid canvas tainting.
-    const encoded = btoa(unescape(encodeURIComponent(svgString)));
+    // Use global btoa function (browser API)
+    const encoded = globalThis.btoa(encodeURIComponent(svgString).replaceAll(/%([0-9A-F]{2})/g, (_, p1) => String.fromCodePoint(Number.parseInt(p1, 16))));
     const dataUrl = `data:image/svg+xml;base64,${encoded}`;
 
     return new Promise<string>((resolve) => {
-      const img = new Image();
+      const img = new globalThis.Image();
 
-      img.onload = () => {
+      img.onload = (): void => {
         const exportCanvas = document.createElement('canvas');
         exportCanvas.width  = width;
         exportCanvas.height = height;
@@ -769,7 +787,7 @@ export class DSLVisualizer {
         resolve(exportCanvas.toDataURL('image/png'));
       };
 
-      img.onerror = () => {
+      img.onerror = (): void => {
         // Fallback to the raw canvas if the SVG cannot be rendered.
         resolve(this.canvas.toDataURL('image/png'));
       };
@@ -797,12 +815,17 @@ export class DSLVisualizer {
       return this.generateSimpleSVG();
     }
 
+    // Get bounds at export time
     const rect = diagramTemplate.getBoundingClientRect();
-    const width  = Math.max(1200, rect.width);
-    const height = Math.max(800,  rect.height);
+    
+    // Use the complete template size for export
+    const width = Math.max(400, rect.width);
+    const height = Math.max(300, rect.height);
 
     // 1. Clone and inline computed styles so the SVG is self-contained.
     const clone = diagramTemplate.cloneNode(true) as HTMLElement;
+    
+    // No need to restore transform - centering is permanent
     
     // 2. Remove navigation buttons from the clone to ensure they don't appear in SVG
     const navigationElements = clone.querySelectorAll('.slide-controls, .slide-btn, .slide-counter');
@@ -852,7 +875,7 @@ export class DSLVisualizer {
     wrapper.appendChild(clone);
     fo.appendChild(wrapper);
 
-    // 3. Serialize to string — XMLSerializer guarantees well-formed XML.
+    // 3. Serialize to string  XMLSerializer guarantees well-formed XML.
     return new XMLSerializer().serializeToString(svg);
   }
 
@@ -861,12 +884,10 @@ export class DSLVisualizer {
    * element tree so the clone is visually self-contained.
    */
   private inlineComputedStyles(source: HTMLElement, target: HTMLElement): void {
-    const computed = window.getComputedStyle(source);
-    for (let i = 0; i < computed.length; i++) {
-      const prop = computed[i];
+    const computed = globalThis.window === undefined ? source.style : globalThis.window.getComputedStyle(source);
+    for (const prop of computed) {
       try {
-        (target.style as unknown as Record<string, string>)[prop] =
-          computed.getPropertyValue(prop);
+        (target.style as CSSStyleDeclaration & Record<string, string>)[prop] = computed.getPropertyValue(prop);
       } catch {
         // Some properties are read-only; skip silently.
       }
@@ -956,7 +977,51 @@ export class DSLVisualizer {
       height: this.canvas.height
     };
   }
-
+  
+  /**
+   * Get the actual content bounds of the diagram including info box
+   * @param diagramTemplate The diagram template element
+   * @returns Combined content bounds or null if not found
+   */
+  private getContentBounds(diagramTemplate: HTMLElement): DOMRect | null {
+    // Find the main content container
+    const contenedor = diagramTemplate.querySelector('.contenedor') as HTMLElement;
+    if (!contenedor) return null;
+    
+    let bounds: DOMRect | null = null;
+    
+    // Get the diagram table which contains the actual flow
+    const diagramTable = contenedor.querySelector('.diagram-table') as HTMLElement;
+    if (diagramTable) {
+      bounds = diagramTable.getBoundingClientRect();
+    } else {
+      // Fallback to the contenedor
+      bounds = contenedor.getBoundingClientRect();
+    }
+    
+    // Include the artifact box (info box) if it exists
+    const artifactBox = contenedor.querySelector('.artifact-box-container') as HTMLElement;
+    if (artifactBox && bounds) {
+      const artifactBounds = artifactBox.getBoundingClientRect();
+      
+      // Create a combined bounds that includes both the table and info box
+      const combinedLeft = Math.min(bounds.left, artifactBounds.left);
+      const combinedTop = Math.min(bounds.top, artifactBounds.top);
+      const combinedRight = Math.max(bounds.right, artifactBounds.right);
+      const combinedBottom = Math.max(bounds.bottom, artifactBounds.bottom);
+      
+      // Create a new DOMRect with combined bounds
+      return new DOMRect(
+        combinedLeft,
+        combinedTop,
+        combinedRight - combinedLeft,
+        combinedBottom - combinedTop
+      );
+    }
+    
+    return bounds;
+  }
+  
   /**
    * Hide navigation buttons for export
    * @returns Original button state for restoration
@@ -967,42 +1032,28 @@ export class DSLVisualizer {
     if (this.renderTarget) {
       // Hide all navigation-related elements
       const navigationElements = this.renderTarget.querySelectorAll('.slide-controls, .slide-btn, .slide-counter');
-      console.log('DEBUG - Found navigation elements:', navigationElements.length);
       
-      navigationElements.forEach((element, index) => {
+      navigationElements.forEach((element) => {
         if (element instanceof HTMLElement) {
           hadButtons = true;
-          console.log(`DEBUG - Hiding navigation element ${index}:`, element.className, element.style.display);
           // Completely hide the element
           element.style.display = 'none';
           element.style.visibility = 'hidden';
           element.style.opacity = '0';
           element.style.pointerEvents = 'none';
-          console.log(`DEBUG - After hiding, display:`, element.style.display);
         }
       });
       
       // Also hide any buttons within the diagram template
       const allButtons = this.renderTarget.querySelectorAll('.diagram-template button');
-      console.log('DEBUG - Found all buttons in diagram template:', allButtons.length);
       
-      allButtons.forEach((button, index) => {
+      allButtons.forEach((button) => {
         if (button instanceof HTMLElement) {
           hadButtons = true;
-          console.log(`DEBUG - Hiding button ${index}:`, button.className, button.textContent);
           button.style.display = 'none';
           button.style.visibility = 'hidden';
           button.style.opacity = '0';
           button.style.pointerEvents = 'none';
-        }
-      });
-      
-      // Check what's still visible after hiding
-      const stillVisible = this.renderTarget.querySelectorAll('.slide-controls, .slide-btn, .slide-counter, .diagram-template button');
-      console.log('DEBUG - Elements still visible after hiding:', stillVisible.length);
-      stillVisible.forEach((el, i) => {
-        if (el instanceof HTMLElement) {
-          console.log(`DEBUG - Still visible ${i}:`, el.className, el.style.display);
         }
       });
     }

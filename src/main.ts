@@ -138,7 +138,7 @@ function setupEventListeners(): void {
     codeTextarea.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         // Force immediate update on Enter
-        setTimeout(() => handleCodeInput(), 0);
+        globalThis.setTimeout(() => handleCodeInput(), 0);
       }
     });
   }
@@ -163,7 +163,6 @@ function handleCodeInput(): void {
   if (codeTextarea && syntaxHighlightDiv) {
     const text = codeTextarea.value;
     
-    console.log('handleCodeInput called, text length:', text.length, 'lines:', text.split('\n').length);
     
     // Auto-validate first to get errors
     const validationErrors = getValidationErrors(text);
@@ -171,7 +170,6 @@ function handleCodeInput(): void {
     const highlightedText = syntaxHighlight(text, validationErrors);
     syntaxHighlightDiv.innerHTML = highlightedText;
     
-    console.log('syntaxHighlight updated, innerHTML length:', syntaxHighlightDiv.innerHTML.length);
     
     // Update line numbers with wrap detection
     if (lineNumbersDiv) {
@@ -219,21 +217,21 @@ function handleCodeInput(): void {
       });
       
       lineNumbersDiv.innerHTML = lineNumbersHTML;
-      console.log('lineNumbers updated with wrap detection');
     }
     
     // Force scroll to bottom if content was added (like pressing Enter)
     const currentLines = text.split('\n').length;
-    const previousLines = parseInt(syntaxHighlightDiv.dataset.lineCount || '0');
+    const previousLines = Number.parseInt(syntaxHighlightDiv.dataset['lineCount'] ?? '0');
     
     if (currentLines > previousLines) {
       // New line was added, scroll to bottom
       syntaxHighlightDiv.scrollTop = syntaxHighlightDiv.scrollHeight;
-      lineNumbersDiv.scrollTop = lineNumbersDiv.scrollHeight;
-      console.log('Scrolled to bottom, new lines:', currentLines);
+      if (lineNumbersDiv) {
+        lineNumbersDiv.scrollTop = lineNumbersDiv.scrollHeight;
+      }
     }
     
-    syntaxHighlightDiv.dataset.lineCount = currentLines.toString();
+    syntaxHighlightDiv.dataset['lineCount'] = currentLines.toString();
     
     // Auto-validate
     validate();
@@ -638,7 +636,7 @@ async function exportPNG(): Promise<void> {
 
         const attribute = program.allAttributes[index];
         const attributeName = sanitizeFileName(attribute?.name ?? `attribute_${index + 1}`);
-        const dataUrl = visualizer.exportPNG();
+        const dataUrl = await visualizer.exportPNG();
         const base64 = dataUrl.split(',')[1] ?? '';
         zip.file(`${systemName}_${attributeName}.png`, base64, { base64: true });
       }
@@ -647,8 +645,8 @@ async function exportPNG(): Promise<void> {
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       triggerDownload(zipBlob, `${systemName}_attributes.zip`);
     } else {
-      const dataUrl = visualizer.exportPNG();
-      const response = await fetch(dataUrl);
+      const dataUrl = await visualizer.exportPNG();
+      const response = await globalThis.fetch(dataUrl);
       const blob = await response.blob();
       triggerDownload(blob, `${systemName}.png`);
     }
@@ -689,7 +687,7 @@ async function exportSVG(): Promise<void> {
         zip.file(fileName, visualizer.exportSVG());
       }
 
-      // Restore navigation buttons after export
+      // Restore navigation buttons after export (but keep canvas centered)
       visualizer.showNavigationButtons(originalButtonState);
       visualizer.setCurrentAttributeIndex(originalIndex);
       
@@ -703,7 +701,7 @@ async function exportSVG(): Promise<void> {
       const svgText = visualizer.exportSVG();
       triggerDownload(new Blob([svgText], { type: 'image/svg+xml' }), `${systemName}.svg`);
       
-      // Restore navigation buttons
+      // Restore navigation buttons (but keep canvas centered)
       visualizer.showNavigationButtons(originalButtonState);
       updateStatus('Exported SVG');
     }
@@ -719,7 +717,7 @@ async function exportSVG(): Promise<void> {
 function nextSlide(): void {
   const state = visualizer?.nextAttribute();
   if (state) {
-    updateSlideCounter(state.current, state.total);
+    updateSlideCounter(state.current);
   }
 }
 
@@ -729,14 +727,14 @@ function nextSlide(): void {
 function previousSlide(): void {
   const state = visualizer?.previousAttribute();
   if (state) {
-    updateSlideCounter(state.current, state.total);
+    updateSlideCounter(state.current);
   }
 }
 
 /**
  * Update slide counter display
  */
-function updateSlideCounter(current: number, total: number): void {
+function updateSlideCounter(current: number): void {
   const currentSpan = document.querySelector('.slide-counter .current');
   if (currentSpan) {
     currentSpan.textContent = current.toString();
