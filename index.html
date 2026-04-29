@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Qify</title>
+  <script type="module" src="/src/main.ts"></script>
+  <!-- External CSS for better organization -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="header">
+  <span>Qify</span>
+  <div>
+    <span id="status" class="status">Ready</span>
+    <button onclick="toggleExamples()">Examples ▼</button>
+  </div>
+</div>
+
+<div class="examples" id="examples">
+  <button onclick="loadExample('basic')">Basic Example</button>
+  <button onclick="loadExample('ecommerce')">E-commerce System</button>
+  <button onclick="loadExample('healthcare')">Healthcare System</button>
+  <button onclick="loadExample('iot')">IoT System</button>
+</div>
+
+<div class="container">
+  <div class="editor code-editor">
+    <div class="editor-container">
+      <div id="lineNumbers" class="line-numbers"></div>
+      <div id="syntaxHighlight" class="syntax-highlight"></div>
+      <textarea id="code" placeholder="Enter your Quality Attribute DSL here...
+
+Example:
+system Ecommerce
+
+attribute PerformanceCheckout {
+  artifact: CheckoutService
+  category: PerformanceEfficiency.TimeBehaviour
+  
+  source: external user
+  stimulus: 1000 concurrent users
+  environment: peak hours
+  response: response time < 2s
+  measure: latency percentile p95
+}"></textarea>
+    </div>
+
+    <div class="toolbar">
+      <button onclick="exportPNG()">Export PNG</button>
+      <button onclick="exportSVG()">Export SVG</button>
+      <button onclick="downloadCode()">Download .qify</button>
+      <button onclick="importCode()">Import .qify</button>
+      <input type="file" id="fileInput" accept=".qify" style="display: none;" onchange="handleFileImport(event)">
+    </div>
+    <div id="errorPanel" class="error-panel">
+      <div class="error-header">
+        <span>Errors</span>
+        <button onclick="copyErrors()" class="copy-button">Copy</button>
+      </div>
+      <div id="errorList" class="error-list"></div>
+    </div>
+  </div>
+
+  <div class="preview">
+    <div id="visualization" class="visualization"></div>
+    <canvas id="canvas" width="800" height="600"></canvas>
+  </div>
+</div>
+
+</body>
+</html>
