@@ -289,15 +289,27 @@ export class DSLVisualizer {
     const categoryText = currentAttribute ? this.escapeHtml(currentAttribute.category.toString()) : '';
 
     const flowHtml = currentAttribute ? this.buildAttributeFlowHtml(currentAttribute) : '';
-    const infoBoxesHtml = !hideInfo && currentAttribute
-      ? this.buildInfoBoxHtml(systemName, attributeName, categoryText, currentDate, attributeCount)
+    const infoBoxesHtml = currentAttribute
+      ? this.buildInfoBoxHtml(systemName, attributeName, categoryText, currentDate)
+      : '';
+
+    // Always show navigation controls if there are multiple attributes
+    const navigationHtml = attributeCount > 1
+      ? `
+        <div class="slide-controls">
+          <button class="slide-btn prev" onclick="previousSlide()">&lt;</button>
+          <span class="slide-counter"><span class="current">${this.currentAttributeIndex + 1}</span>/<span class="total">${attributeCount}</span></span>
+          <button class="slide-btn next" onclick="nextSlide()">&gt;</button>
+        </div>
+      `
       : '';
 
     this.renderTarget.innerHTML = `
       <div class="diagram-template">
         <div class="contenedor">
           ${flowHtml}
-          ${infoBoxesHtml}
+          ${hideInfo ? '' : infoBoxesHtml}
+          ${navigationHtml}
         </div>
       </div>
     `;
@@ -315,49 +327,49 @@ export class DSLVisualizer {
     const artifactText = this.escapeHtml(attribute.artifact.name || '');
 
     return `
-      <div class="fila">
-        <div class="columna">
-          ${this.getSourceSvg()}
-          <div class="texto"><strong>Fuente:</strong><br>${sourceText}</div>
-        </div>
-
-        <div class="columna">
-          ${this.getArrowSvg()}
-          <div class="texto"><strong>Estimulo:</strong><br>${stimulusText}</div>
-        </div>
-
-        <div class="columna artifact-columna">
-          ${this.getArtifactBox(artifactText)}
-          <div class="texto"><strong>Entorno:</strong><br>${environmentText}</div>
-        </div>
-
-        <div class="columna">
-          ${this.getArrowSvg()}
-          <div class="texto"><strong>Respuesta:</strong><br>${responseText}</div>
-        </div>
-
-        <div class="columna">
-          ${this.getMeasureSvg()}
-          <div class="texto"><strong>Medidas:</strong><br>${measureText}</div>
-        </div>
-      </div>
+      <table class="diagram-table">
+        <tr>
+          <td class="component-cell">
+            <div class="component-wrapper">${this.getSourceSvg()}</div>
+          </td>
+          <td class="component-cell">
+            <div class="component-wrapper">${this.getArrowSvg()}</div>
+          </td>
+          <td class="component-cell">
+            <div class="component-wrapper">${this.getArtifactBox(artifactText)}</div>
+          </td>
+          <td class="component-cell">
+            <div class="component-wrapper">${this.getArrowSvg()}</div>
+          </td>
+          <td class="component-cell">
+            <div class="component-wrapper">${this.getMeasureSvg()}</div>
+          </td>
+        </tr>
+        <tr>
+          <td class="text-cell">
+            <div class="texto"><strong>Fuente:</strong><br>${sourceText}</div>
+          </td>
+          <td class="text-cell">
+            <div class="texto"><strong>Estimulo:</strong><br>${stimulusText}</div>
+          </td>
+          <td class="text-cell">
+            <div class="texto"><strong>Entorno:</strong><br>${environmentText}</div>
+          </td>
+          <td class="text-cell">
+            <div class="texto"><strong>Respuesta:</strong><br>${responseText}</div>
+          </td>
+          <td class="text-cell">
+            <div class="texto"><strong>Medidas:</strong><br>${measureText}</div>
+          </td>
+        </tr>
+      </table>
     `;
   }
 
   /**
    * Build the info box HTML for the current attribute.
    */
-  private buildInfoBoxHtml(systemName: string, attributeName: string, categoryText: string, currentDate: string, attributeCount: number): string {
-    const navigationHtml = attributeCount > 1
-      ? `
-        <div class="slide-controls">
-          <button class="slide-btn prev" onclick="previousSlide()">&lt;</button>
-          <span class="slide-counter"><span class="current">${this.currentAttributeIndex + 1}</span>/<span class="total">${attributeCount}</span></span>
-          <button class="slide-btn next" onclick="nextSlide()">&gt;</button>
-        </div>
-      `
-      : '';
-
+  private buildInfoBoxHtml(systemName: string, attributeName: string, categoryText: string, currentDate: string): string {
     return `
       <div class="artifact-box-container">
         <div class="artifact-box">
@@ -366,7 +378,6 @@ export class DSLVisualizer {
           <div class="info-row"><strong>Categoría:</strong> ${categoryText}</div>
           <div class="info-row"><strong>Modificado:</strong> ${currentDate}</div>
         </div>
-        ${navigationHtml}
       </div>
     `;
   }
@@ -414,7 +425,7 @@ export class DSLVisualizer {
 
   private getSourceSvg(): string {
     return `
-      <svg xmlns="http://www.w3.org/2000/svg" width="70" height="70" display="block" preserveAspectRatio="xMidYMid meet" viewBox="0 0 1470.5 1524.6" style="flex-shrink: 0;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="70" height="70" display="block" preserveAspectRatio="xMidYMid meet" viewBox="0 0 1470.5 1524.6" style="flex-shrink: 0;width: 100;">
         <path fill="#d0d0d0" d="m1126 342.6-21 19-32 24-3 3-2 4-7 2q-5-1-7 3c2 9-27 53-25 67l-1 3-10 7 5 1 9 4 5 1 3 1 1 1h2l1 1 3 1 2 1h1l2 1 11 4 4 1 6 3 1 1 5 2 4 1 2 1h2l3 2h1l1 1h2l3 2h2l2 1 3 1h3l2 1 10 4 3 1h1l3 1 2 1h2v1h1l4 1h2v1c1 0 9 4 8-4 3-9 21-30 28-37 10 4 15 8 24 14l5-5-19-13-25-18c2-4 1-4-2-8-1-2-26-16-30-19l-24-16 1-2c10-4 42-32 47-42-1-21-2-25-24-25" display="inline"/>
         <path fill="#a7a7a8" d="M1030 468.6c-9.2 0-14.4 4.9-16.2 8.2l-41.2 123.8-45.1 136.8c-1.1 1.2-4.7.1-7.7-1.4l-103.6-74.5c-65.2-47-88.3-66-113.2-80-9-5-34-2-294-2s-287-1-297 1c-11.6 6-36.3-15.3-85 303.6-36 479.3-23 460.2-19.7 470.5.9 2.3 10.1 22.2 59.7 16 49.6-6 62.6-9.4 63.6-16 2.2-13.4 3.3-51.8 3.8-218.5.5-166.8 1-172.3 1.7-177.7q.6-1.4 2-1.1c.7 0 1.7.5 1.9 2.3l47 588.9 432-1 22.5-264L682 826l.3-.4c14.5.4 62.8 24 171.8 71 108.9 47 145.9 65 155.9 63 11-1 31-68 81.5-208.5s71.5-204 74-220.5c0-1.8-.7-3.5-3-5 0 0-113.5-57-132.5-57"/>
         <path fill="#d0d0d0" d="M9 1357.6h120a60 119 0 0 1-120 0m392-1162a148 183 0 1 0 .1 0z" display="inline"/>

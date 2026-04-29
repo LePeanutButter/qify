@@ -30,21 +30,21 @@
     <div class="editor-container">
       <div id="lineNumbers" class="line-numbers"></div>
       <div id="syntaxHighlight" class="syntax-highlight"></div>
-      <textarea id="code" placeholder="Enter your Quality Attribute DSL here...
+      <textarea id="code" placeholder='Enter your Quality Attribute DSL here...
 
 Example:
 system Ecommerce
 
 attribute PerformanceCheckout {
-  artifact: CheckoutService
+  artifact: "CheckoutService"
   category: PerformanceEfficiency.TimeBehaviour
   
-  source: external user
-  stimulus: 1000 concurrent users
-  environment: peak hours
-  response: response time < 2s
-  measure: latency percentile p95
-}"></textarea>
+  source: "external user"
+  stimulus: "1000 concurrent users"
+  environment: "peak hours"
+  response: "response time < 2s"
+  measure: "latency percentile p95"
+}'></textarea>
     </div>
 
     <div class="toolbar">
@@ -77,6 +77,54 @@ attribute PerformanceCheckout {
 
   document.addEventListener('dragstart', function(e) {
     if (e.target.tagName === 'IMG') {
+      e.preventDefault();
+    }
+  });
+
+  // Canvas dragging functionality
+  let isDragging = false;
+  let startX, startY;
+  let scrollLeft, scrollTop;
+  let currentX = 0, currentY = 0;
+
+  const visualization = document.getElementById('visualization');
+  
+  visualization.addEventListener('mousedown', function(e) {
+    // Only start dragging with left mouse button
+    if (e.button === 0) {
+      isDragging = true;
+      startX = e.pageX - currentX;
+      startY = e.pageY - currentY;
+      visualization.style.cursor = 'grabbing';
+      visualization.style.userSelect = 'none';
+      e.preventDefault();
+    }
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    
+    e.preventDefault();
+    currentX = e.pageX - startX;
+    currentY = e.pageY - startY;
+    
+    const diagramTemplate = visualization.querySelector('.diagram-template');
+    if (diagramTemplate) {
+      diagramTemplate.style.transform = `translate(${currentX}px, ${currentY}px)`;
+    }
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (isDragging) {
+      isDragging = false;
+      visualization.style.cursor = 'grab';
+      visualization.style.userSelect = 'auto';
+    }
+  });
+
+  // Prevent text selection while dragging
+  visualization.addEventListener('selectstart', function(e) {
+    if (isDragging) {
       e.preventDefault();
     }
   });
