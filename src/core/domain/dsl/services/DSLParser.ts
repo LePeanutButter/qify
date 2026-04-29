@@ -386,7 +386,8 @@ export class DSLParser {
     let name = 'Default System';
     if (node.children && node.children.length > 0) {
       const identifierNode = node.children[0];
-      if (identifierNode.type === 'Identifier' && identifierNode.children) {
+      
+      if (identifierNode.type === 'Identifier') {
         // Extract the actual name from the token
         const token = this.tokens.find(t => t.position === identifierNode.position);
         if (token) name = token.value;
@@ -401,8 +402,28 @@ export class DSLParser {
   private astToAttribute(node: ASTNode): Attribute | null {
     if (!node.children) return null;
 
+    let name = 'Default Attribute';
+    
+    // The attribute name should be in the node itself, not in children
+    // Try to find token for this node's position
+    const token = this.tokens.find(t => t.position === node.position);
+    
+    if (token) {
+      name = token.value;
+    } else {
+      // Fallback: check children for Identifier
+      const identifierNode = node.children.find(child => child.type === 'Identifier');
+      
+      if (identifierNode) {
+        const childToken = this.tokens.find(t => t.position === identifierNode.position);
+        if (childToken) {
+          name = childToken.value;
+        }
+      }
+    }
+
     const attribute: Attribute = {
-      name: 'Default Attribute',
+      name,
       artifact: { name: '' },
       category: 'FunctionalSuitability.FunctionalCompleteness',
       scenario: {

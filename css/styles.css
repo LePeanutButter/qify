@@ -31,8 +31,7 @@ body {
   font-family: "Fira Code", monospace;
   font-size: 14px;
   line-height: 1.5;
-  overflow: auto;
-  display: flex;
+  overflow: hidden;
 }
 
 .line-numbers {
@@ -40,6 +39,7 @@ body {
   left: 0;
   top: 20px;
   width: 40px;
+  height: calc(100% - 40px);
   background: #1a1d24;
   color: #9ca3af;
   font-family: "Fira Code", monospace;
@@ -50,6 +50,13 @@ body {
   user-select: none;
   z-index: 1;
   border-radius: 4px 0 0 4px;
+  overflow: hidden;
+  white-space: pre;
+  pointer-events: none;
+}
+
+.line-numbers::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Opera */
 }
 
 textarea {
@@ -64,6 +71,8 @@ textarea {
   font-family: "Fira Code", monospace;
   font-size: 14px;
   line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
   outline: none;
   resize: none;
   caret-color: #e6e6e6;
@@ -72,6 +81,12 @@ textarea {
   margin: 0;
   box-sizing: border-box;
   overflow: auto;
+  /* Ensure consistent text rendering */
+  text-align: left;
+  letter-spacing: normal;
+  tab-size: 4;
+  /* Force scrollbar to always be visible to maintain consistent width */
+  scrollbar-gutter: stable;
 }
 
 .syntax-highlight {
@@ -89,13 +104,22 @@ textarea {
   word-wrap: break-word;
   pointer-events: none;
   z-index: 1;
-  overflow: hidden;
+  overflow: auto;
   padding: 0;
   margin: 0;
   box-sizing: border-box;
   text-align: left;
   letter-spacing: normal;
   tab-size: 4;
+  /* Force scrollbar to always be visible to maintain consistent width */
+  scrollbar-gutter: stable;
+  /* Hide scrollbar but keep functionality */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.syntax-highlight::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Opera */
 }
 
 .syntax-highlight .new-char {

@@ -803,6 +803,19 @@ export class DSLVisualizer {
 
     // 1. Clone and inline computed styles so the SVG is self-contained.
     const clone = diagramTemplate.cloneNode(true) as HTMLElement;
+    
+    // 2. Remove navigation buttons from the clone to ensure they don't appear in SVG
+    const navigationElements = clone.querySelectorAll('.slide-controls, .slide-btn, .slide-counter');
+    navigationElements.forEach(element => {
+      element.remove();
+    });
+    
+    // Also remove any buttons within the diagram template clone
+    const allButtons = clone.querySelectorAll('button');
+    allButtons.forEach(button => {
+      button.remove();
+    });
+    
     this.inlineComputedStyles(diagramTemplate, clone);
 
     // 2. Build the foreignObject wrapper as a real DOM tree so XMLSerializer
@@ -942,6 +955,91 @@ export class DSLVisualizer {
       width: this.canvas.width,
       height: this.canvas.height
     };
+  }
+
+  /**
+   * Hide navigation buttons for export
+   * @returns Original button state for restoration
+   */
+  hideNavigationButtons(): boolean {
+    let hadButtons = false;
+    
+    if (this.renderTarget) {
+      // Hide all navigation-related elements
+      const navigationElements = this.renderTarget.querySelectorAll('.slide-controls, .slide-btn, .slide-counter');
+      console.log('DEBUG - Found navigation elements:', navigationElements.length);
+      
+      navigationElements.forEach((element, index) => {
+        if (element instanceof HTMLElement) {
+          hadButtons = true;
+          console.log(`DEBUG - Hiding navigation element ${index}:`, element.className, element.style.display);
+          // Completely hide the element
+          element.style.display = 'none';
+          element.style.visibility = 'hidden';
+          element.style.opacity = '0';
+          element.style.pointerEvents = 'none';
+          console.log(`DEBUG - After hiding, display:`, element.style.display);
+        }
+      });
+      
+      // Also hide any buttons within the diagram template
+      const allButtons = this.renderTarget.querySelectorAll('.diagram-template button');
+      console.log('DEBUG - Found all buttons in diagram template:', allButtons.length);
+      
+      allButtons.forEach((button, index) => {
+        if (button instanceof HTMLElement) {
+          hadButtons = true;
+          console.log(`DEBUG - Hiding button ${index}:`, button.className, button.textContent);
+          button.style.display = 'none';
+          button.style.visibility = 'hidden';
+          button.style.opacity = '0';
+          button.style.pointerEvents = 'none';
+        }
+      });
+      
+      // Check what's still visible after hiding
+      const stillVisible = this.renderTarget.querySelectorAll('.slide-controls, .slide-btn, .slide-counter, .diagram-template button');
+      console.log('DEBUG - Elements still visible after hiding:', stillVisible.length);
+      stillVisible.forEach((el, i) => {
+        if (el instanceof HTMLElement) {
+          console.log(`DEBUG - Still visible ${i}:`, el.className, el.style.display);
+        }
+      });
+    }
+    
+    return hadButtons;
+  }
+
+  /**
+   * Show navigation buttons after export
+   * @param hadButtons Whether buttons were originally visible
+   */
+  showNavigationButtons(hadButtons: boolean): void {
+    if (!hadButtons || !this.renderTarget) return;
+    
+    // Restore all navigation-related elements
+    const navigationElements = this.renderTarget.querySelectorAll('.slide-controls, .slide-btn, .slide-counter');
+    
+    navigationElements.forEach(element => {
+      if (element instanceof HTMLElement) {
+        // Restore all visibility properties
+        element.style.display = '';
+        element.style.visibility = '';
+        element.style.opacity = '';
+        element.style.pointerEvents = '';
+      }
+    });
+    
+    // Also restore any buttons within the diagram template
+    const allButtons = this.renderTarget.querySelectorAll('.diagram-template button');
+    allButtons.forEach(button => {
+      if (button instanceof HTMLElement) {
+        button.style.display = '';
+        button.style.visibility = '';
+        button.style.opacity = '';
+        button.style.pointerEvents = '';
+      }
+    });
   }
 
   /**

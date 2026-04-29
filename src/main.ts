@@ -130,8 +130,17 @@ function setupEventListeners(): void {
   
   if (codeTextarea) {
     codeTextarea.addEventListener('input', handleCodeInput);
+    codeTextarea.addEventListener('keyup', handleCodeInput);
     codeTextarea.addEventListener('scroll', syncScroll);
     codeTextarea.addEventListener('keydown', handleKeyDown);
+    
+    // Add specific listener for Enter key
+    codeTextarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        // Force immediate update on Enter
+        setTimeout(() => handleCodeInput(), 0);
+      }
+    });
   }
   
   // Close examples when clicking outside
@@ -154,18 +163,77 @@ function handleCodeInput(): void {
   if (codeTextarea && syntaxHighlightDiv) {
     const text = codeTextarea.value;
     
+    console.log('handleCodeInput called, text length:', text.length, 'lines:', text.split('\n').length);
+    
     // Auto-validate first to get errors
     const validationErrors = getValidationErrors(text);
     
     const highlightedText = syntaxHighlight(text, validationErrors);
     syntaxHighlightDiv.innerHTML = highlightedText;
     
-    // Update line numbers
+    console.log('syntaxHighlight updated, innerHTML length:', syntaxHighlightDiv.innerHTML.length);
+    
+    // Update line numbers with wrap detection
     if (lineNumbersDiv) {
       const lines = text.split('\n');
-      const lineNumbersHTML = lines.map((_, index) => `<div>${index + 1}</div>`).join('');
+      let lineNumbersHTML = '';
+      
+      lines.forEach((line, index) => {
+        if (line.trim() === '') {
+          // Empty line - still show number
+          lineNumbersHTML += `<div>${index + 1}</div>`;
+        } else {
+          // Create a temporary element to measure actual line height with wrap
+          const tempDiv = document.createElement('div');
+          tempDiv.style.cssText = `
+            position: absolute;
+            visibility: hidden;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: "Fira Code", monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            width: ${codeTextarea.clientWidth}px;
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+            text-align: left;
+            letter-spacing: normal;
+            tab-size: 4;
+          `;
+          tempDiv.textContent = line;
+          document.body.appendChild(tempDiv);
+          
+          const height = tempDiv.offsetHeight;
+          const lineHeight = 21; // 14px * 1.5
+          const wrappedLines = Math.round(height / lineHeight);
+          
+          tempDiv.remove();
+          
+          // Add line number for the first line, empty divs for wrapped lines
+          lineNumbersHTML += `<div>${index + 1}</div>`;
+          for (let i = 1; i < wrappedLines; i++) {
+            lineNumbersHTML += `<div>&nbsp;</div>`;
+          }
+        }
+      });
+      
       lineNumbersDiv.innerHTML = lineNumbersHTML;
+      console.log('lineNumbers updated with wrap detection');
     }
+    
+    // Force scroll to bottom if content was added (like pressing Enter)
+    const currentLines = text.split('\n').length;
+    const previousLines = parseInt(syntaxHighlightDiv.dataset.lineCount || '0');
+    
+    if (currentLines > previousLines) {
+      // New line was added, scroll to bottom
+      syntaxHighlightDiv.scrollTop = syntaxHighlightDiv.scrollHeight;
+      lineNumbersDiv.scrollTop = lineNumbersDiv.scrollHeight;
+      console.log('Scrolled to bottom, new lines:', currentLines);
+    }
+    
+    syntaxHighlightDiv.dataset.lineCount = currentLines.toString();
     
     // Auto-validate
     validate();
@@ -606,22 +674,39 @@ async function exportSVG(): Promise<void> {
       const zip = new JSZip();
       const originalIndex = navigationState.current - 1;
 
-      for (let index = 0; index < navigationState.total; index++) {
+      // Hide navigation buttons before export
+      const originalButtonState = visualizer.hideNavigationButtons();
+
+      // Process all attributes in the array
+      for (let index = 0; index < program.allAttributes.length; index++) {
         visualizer.setCurrentAttributeIndex(index);
 
         const attribute = program.allAttributes[index];
+        
+        // Use the actual attribute name (should now be extracted correctly)
         const attributeName = sanitizeFileName(attribute?.name ?? `attribute_${index + 1}`);
-        zip.file(`${systemName}_${attributeName}.svg`, visualizer.exportSVG());
+        const fileName = `${systemName}_${attributeName}.svg`;
+        zip.file(fileName, visualizer.exportSVG());
       }
 
+      // Restore navigation buttons after export
+      visualizer.showNavigationButtons(originalButtonState);
       visualizer.setCurrentAttributeIndex(originalIndex);
+      
       const zipBlob = await zip.generateAsync({ type: 'blob' });
-      triggerDownload(zipBlob, `${systemName}_attributes.zip`);
+      triggerDownload(zipBlob, `${systemName}_all_attributes.zip`);
+      updateStatus(`Exported ${program.allAttributes.length} attributes as SVG batch`);
     } else {
+      // Hide navigation buttons for single export too
+      const originalButtonState = visualizer.hideNavigationButtons();
+      
       const svgText = visualizer.exportSVG();
       triggerDownload(new Blob([svgText], { type: 'image/svg+xml' }), `${systemName}.svg`);
+      
+      // Restore navigation buttons
+      visualizer.showNavigationButtons(originalButtonState);
+      updateStatus('Exported SVG');
     }
-    updateStatus('Exported SVG');
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Export failed';
     updateStatus(`Error: ${errorMessage}`);
