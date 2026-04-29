@@ -723,40 +723,149 @@ export class DSLVisualizer {
   }
 
   /**
-   * Export the current canvas view as PNG with high resolution.
-   * @returns Data URL of the canvas image
+   * Export the current DOM visualization as a high-resolution PNG.
+   *
+   * Flow:
+   *   exportSVG() → base64 data URL → Image → Canvas → PNG data URL
+   *
+   * A base64 data URL is used (instead of a Blob URL) because browsers mark
+   * a canvas as "tainted" when an SVG with <foreignObject> is drawn from a
+   * Blob URL, which blocks toDataURL().
+   *
+   * NOTE: this method is async. Call it with await.
+   * @returns Promise<string> PNG data URL
    */
-  exportPNG(): string {
-    const scale = 2;
-    const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = Math.max(1200, this.canvas.width) * scale;
-    exportCanvas.height = Math.max(800, this.canvas.height) * scale;
+  async exportPNG(): Promise<string> {
+    const svgString = this.exportSVG();
 
-    const ctx = exportCanvas.getContext('2d');
-    if (!ctx) {
-      return this.canvas.toDataURL('image/png');
-    }
+    const diagramTemplate = this.renderTarget?.querySelector('.diagram-template');
+    const rect = diagramTemplate?.getBoundingClientRect();
+    const scale  = 2;
+    const width  = Math.max(1200, rect?.width  ?? 1200) * scale;
+    const height = Math.max(800,  rect?.height ?? 800)  * scale;
 
-    ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(this.canvas, 0, 0, exportCanvas.width, exportCanvas.height);
+    // Encode SVG as a base64 data URL to avoid canvas tainting.
+    const encoded = btoa(unescape(encodeURIComponent(svgString)));
+    const dataUrl = `data:image/svg+xml;base64,${encoded}`;
 
-    return exportCanvas.toDataURL('image/png');
+    return new Promise<string>((resolve) => {
+      const img = new Image();
+
+      img.onload = () => {
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width  = width;
+        exportCanvas.height = height;
+
+        const ctx = exportCanvas.getContext('2d');
+        if (!ctx) {
+          resolve(this.canvas.toDataURL('image/png'));
+          return;
+        }
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        resolve(exportCanvas.toDataURL('image/png'));
+      };
+
+      img.onerror = () => {
+        // Fallback to the raw canvas if the SVG cannot be rendered.
+        resolve(this.canvas.toDataURL('image/png'));
+      };
+
+      img.src = dataUrl;
+    });
   }
 
   /**
-   * Export the current canvas view as a standalone SVG wrapper.
+   * Export the current DOM visualization as SVG using XMLSerializer + foreignObject.
+   *
+   * XMLSerializer serializes the *live* DOM, so every element is already
+   * well-formed XML (void elements like <br> become <br/> automatically).
+   * Computed styles are inlined on a clone so the result is self-contained.
+   *
+   * @returns A well-formed SVG string, or a simple fallback SVG on error.
    */
   exportSVG(): string {
-    const width = Math.max(1200, this.canvas.width);
-    const height = Math.max(800, this.canvas.height);
-    const pngDataUrl = this.exportPNG();
+    if (!this.renderTarget) {
+      return this.generateSimpleSVG();
+    }
 
-    return `
-      <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-        <rect width="100%" height="100%" fill="${this.config.colors.background}" />
-        <image href="${pngDataUrl}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="none" />
-      </svg>
-    `.trim();
+    const diagramTemplate = this.renderTarget.querySelector<HTMLElement>('.diagram-template');
+    if (!diagramTemplate) {
+      return this.generateSimpleSVG();
+    }
+
+    const rect = diagramTemplate.getBoundingClientRect();
+    const width  = Math.max(1200, rect.width);
+    const height = Math.max(800,  rect.height);
+
+    // 1. Clone and inline computed styles so the SVG is self-contained.
+    const clone = diagramTemplate.cloneNode(true) as HTMLElement;
+    this.inlineComputedStyles(diagramTemplate, clone);
+
+    // 2. Build the foreignObject wrapper as a real DOM tree so XMLSerializer
+    //    produces valid XML (void elements are serialized correctly).
+    const svgNS  = 'http://www.w3.org/2000/svg';
+    const xhtmlNS = 'http://www.w3.org/1999/xhtml';
+
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('xmlns', svgNS);
+    svg.setAttribute('xmlns:xhtml', xhtmlNS);
+    svg.setAttribute('width',   String(width));
+    svg.setAttribute('height',  String(height));
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+    const bg = document.createElementNS(svgNS, 'rect');
+    bg.setAttribute('width',  '100%');
+    bg.setAttribute('height', '100%');
+    bg.setAttribute('fill',   '#ffffff');
+    svg.appendChild(bg);
+
+    const fo = document.createElementNS(svgNS, 'foreignObject');
+    fo.setAttribute('x',      '0');
+    fo.setAttribute('y',      '0');
+    fo.setAttribute('width',  String(width));
+    fo.setAttribute('height', String(height));
+    svg.appendChild(fo);
+
+    // The immediate child of foreignObject must be in the XHTML namespace.
+    const wrapper = document.createElementNS(xhtmlNS, 'div');
+    wrapper.setAttribute(
+      'style',
+      `width:${width}px;height:${height}px;overflow:hidden;background:#ffffff;`
+    );
+    wrapper.appendChild(clone);
+    fo.appendChild(wrapper);
+
+    // 3. Serialize to string — XMLSerializer guarantees well-formed XML.
+    return new XMLSerializer().serializeToString(svg);
+  }
+
+  /**
+   * Recursively copy computed styles from a live element tree into a cloned
+   * element tree so the clone is visually self-contained.
+   */
+  private inlineComputedStyles(source: HTMLElement, target: HTMLElement): void {
+    const computed = window.getComputedStyle(source);
+    for (let i = 0; i < computed.length; i++) {
+      const prop = computed[i];
+      try {
+        (target.style as unknown as Record<string, string>)[prop] =
+          computed.getPropertyValue(prop);
+      } catch {
+        // Some properties are read-only; skip silently.
+      }
+    }
+
+    const srcChildren = Array.from(source.children) as HTMLElement[];
+    const tgtChildren = Array.from(target.children) as HTMLElement[];
+    srcChildren.forEach((child, i) => {
+      if (tgtChildren[i]) {
+        this.inlineComputedStyles(child, tgtChildren[i]);
+      }
+    });
   }
 
   /**
@@ -770,6 +879,22 @@ export class DSLVisualizer {
       throw new Error('Failed to parse DSL text');
     }
     return parseResult.program;
+  }
+
+  /**
+   * Generate simple fallback SVG
+   */
+  private generateSimpleSVG(): string {
+    const width = 1200;
+    const height = 800;
+    return `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+        <rect width="100%" height="100%" fill="#ffffff" />
+        <text x="50%" y="50%" text-anchor="middle" font-size="16" font-family="Arial" fill="#666">
+          Diagram Export
+        </text>
+      </svg>
+    `.trim();
   }
 
   /**
