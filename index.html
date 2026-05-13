@@ -11,7 +11,7 @@
 <body>
 
 <div class="header">
-  <img src="img/qify-header.png" alt="Qify Logo" class="logo" height="50">
+  <img src="img/qify-icon.png" alt="Qify Logo" class="logo" height="50">
   <div>
     <span id="status" class="status">Ready</span>
     <button onclick="toggleExamples()">Examples ▼</button>
@@ -50,6 +50,7 @@ attribute PerformanceCheckout {
     <div class="toolbar">
       <button onclick="exportPNG()">Export PNG</button>
       <button onclick="exportSVG()">Export SVG</button>
+      <button onclick="exportPDF()">Export PDF</button>
       <button onclick="downloadCode()">Download .qify</button>
       <button onclick="importCode()">Import .qify</button>
       <input type="file" id="fileInput" accept=".qify" style="display: none;" onchange="handleFileImport(event)">

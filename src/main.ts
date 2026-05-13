@@ -7,6 +7,7 @@ import { DSLParser } from './core/domain/dsl/services/DSLParser';
 import type { ValidationError } from './core/domain/dsl/types/DSL.types';
 import { DSLVisualizer } from './core/domain/visualization/services/Visualizer';
 import JSZip from 'jszip';
+import { jsPDF } from 'jspdf';
 
 // Global instances
 let visualizer: DSLVisualizer;
@@ -712,6 +713,141 @@ async function exportSVG(): Promise<void> {
 }
 
 /**
+ * Convert SVG to PNG using canvas (handles foreignObject via browser rendering)
+ */
+async function svgToPng(svgText: string, width: number, height: number): Promise<string> {
+  // Encode SVG to base64 to avoid CORS issues
+  const svgBase64 = btoa(unescape(encodeURIComponent(svgText)));
+  const svgDataUrl = `data:image/svg+xml;base64,${svgBase64}`;
+
+  // Create a canvas element
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Failed to get canvas context');
+  }
+
+  // Create an image to load the SVG
+  const img = new Image();
+  
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error('Failed to load SVG'));
+    img.src = svgDataUrl;
+  });
+
+  // Draw the SVG image to the canvas (browser renders foreignObject)
+  ctx.drawImage(img, 0, 0, width, height);
+  
+  // Get PNG data URL from canvas
+  return canvas.toDataURL('image/png');
+}
+
+/**
+ * Convert SVG to PDF using canvas rendering (handles foreignObject)
+ */
+async function svgToPdf(svgText: string, fileName: string): Promise<void> {
+  // Extract width and height from SVG
+  const widthMatch = svgText.match(/width="([\d.]+)(px)?"/);
+  const heightMatch = svgText.match(/height="([\d.]+)(px)?"/);
+
+  const width = widthMatch && widthMatch[1] ? parseFloat(widthMatch[1]) : 1000;
+  const height = heightMatch && heightMatch[1] ? parseFloat(heightMatch[1]) : 1000;
+
+  // Convert SVG to PNG using canvas (handles foreignObject via browser)
+  const pngDataUrl = await svgToPng(svgText, width, height);
+
+  // Create PDF with dimensions matching the SVG
+  const pdf = new jsPDF({
+    orientation: width > height ? 'landscape' : 'portrait',
+    unit: 'px',
+    format: [width, height]
+  });
+
+  // Add the PNG image to the PDF
+  pdf.addImage(pngDataUrl, 'PNG', 0, 0, width, height);
+  
+  // Save the PDF
+  pdf.save(fileName);
+}
+
+/**
+ * Export visualization as PDF
+ */
+async function exportPDF(): Promise<void> {
+  if (!visualizer) return;
+  
+  try {
+    const program = visualizer.getCurrentProgram();
+    const navigationState = visualizer.getAttributeNavigationState();
+    const systemName = sanitizeFileName(program?.system.name ?? 'quality-attributes');
+
+    if (navigationState.total > 1 && program) {
+      const zip = new JSZip();
+      const originalIndex = navigationState.current - 1;
+
+      // Hide navigation buttons before export
+      const originalButtonState = visualizer.hideNavigationButtons();
+
+      // Process all attributes in the array
+      for (let index = 0; index < program.allAttributes.length; index++) {
+        visualizer.setCurrentAttributeIndex(index);
+
+        const attribute = program.allAttributes[index];
+        
+        // Use the actual attribute name
+        const attributeName = sanitizeFileName(attribute?.name ?? `attribute_${index + 1}`);
+        const svgText = visualizer.exportSVG();
+        
+        // Convert SVG to PDF and add to zip
+        const widthMatch = svgText.match(/width="([\d.]+)(px)?"/);
+        const heightMatch = svgText.match(/height="([\d.]+)(px)?"/);
+        const width = widthMatch && widthMatch[1] ? parseFloat(widthMatch[1]) : 1000;
+        const height = heightMatch && heightMatch[1] ? parseFloat(heightMatch[1]) : 1000;
+
+        // Convert SVG to PNG using canvas (handles foreignObject via browser)
+        const pngDataUrl = await svgToPng(svgText, width, height);
+
+        const pdf = new jsPDF({
+          orientation: width > height ? 'landscape' : 'portrait',
+          unit: 'px',
+          format: [width, height]
+        });
+
+        pdf.addImage(pngDataUrl, 'PNG', 0, 0, width, height);
+        const pdfBytes = pdf.output('arraybuffer');
+        
+        zip.file(`${systemName}_${attributeName}.pdf`, pdfBytes);
+      }
+
+      // Restore navigation buttons after export
+      visualizer.showNavigationButtons(originalButtonState);
+      visualizer.setCurrentAttributeIndex(originalIndex);
+      
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      triggerDownload(zipBlob, `${systemName}_all_attributes.zip`);
+      updateStatus(`Exported ${program.allAttributes.length} attributes as PDF batch`);
+    } else {
+      // Hide navigation buttons for single export too
+      const originalButtonState = visualizer.hideNavigationButtons();
+      
+      const svgText = visualizer.exportSVG();
+      const fileName = `${systemName}.pdf`;
+      await svgToPdf(svgText, fileName);
+      
+      // Restore navigation buttons
+      visualizer.showNavigationButtons(originalButtonState);
+      updateStatus('Exported PDF');
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Export failed';
+    updateStatus(`Error: ${errorMessage}`);
+  }
+}
+
+/**
  * Navigate to next slide
  */
 function nextSlide(): void {
@@ -822,6 +958,7 @@ Object.assign(globalThis as typeof globalThis & Record<string, unknown>, {
   validate,
   exportPNG,
   exportSVG,
+  exportPDF,
   clearCanvas,
   downloadCode,
   importCode,
