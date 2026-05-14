@@ -170,67 +170,19 @@ function handleCodeInput(): void {
     const highlightedText = syntaxHighlight(text, validationErrors);
     syntaxHighlightDiv.innerHTML = highlightedText;
     
-    
-    // Update line numbers with wrap detection
+    // Update line numbers
     if (lineNumbersDiv) {
       const lines = text.split('\n');
       let lineNumbersHTML = '';
       
-      lines.forEach((line, index) => {
-        if (line.trim() === '') {
-          // Empty line - still show number
-          lineNumbersHTML += `<div>${index + 1}</div>`;
-        } else {
-          // Create a temporary element to measure actual line height with wrap
-          const tempDiv = document.createElement('div');
-          tempDiv.style.cssText = `
-            position: absolute;
-            visibility: hidden;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-family: "Fira Code", monospace;
-            font-size: 14px;
-            line-height: 1.5;
-            width: ${codeTextarea.clientWidth}px;
-            padding: 0;
-            margin: 0;
-            box-sizing: border-box;
-            text-align: left;
-            letter-spacing: normal;
-            tab-size: 4;
-          `;
-          tempDiv.textContent = line;
-          document.body.appendChild(tempDiv);
-          
-          const height = tempDiv.offsetHeight;
-          const lineHeight = 21; // 14px * 1.5
-          const wrappedLines = Math.round(height / lineHeight);
-          
-          tempDiv.remove();
-          
-          // Add line number for the first line, empty divs for wrapped lines
-          lineNumbersHTML += `<div>${index + 1}</div>`;
-          for (let i = 1; i < wrappedLines; i++) {
-            lineNumbersHTML += `<div>&nbsp;</div>`;
-          }
-        }
+      lines.forEach((_, index) => {
+        lineNumbersHTML += `<div>${index + 1}</div>`;
       });
       
       lineNumbersDiv.innerHTML = lineNumbersHTML;
     }
     
-    // Force scroll to bottom if content was added (like pressing Enter)
     const currentLines = text.split('\n').length;
-    const previousLines = Number.parseInt(syntaxHighlightDiv.dataset['lineCount'] ?? '0');
-    
-    if (currentLines > previousLines) {
-      // New line was added, scroll to bottom
-      syntaxHighlightDiv.scrollTop = syntaxHighlightDiv.scrollHeight;
-      if (lineNumbersDiv) {
-        lineNumbersDiv.scrollTop = lineNumbersDiv.scrollHeight;
-      }
-    }
-    
     syntaxHighlightDiv.dataset['lineCount'] = currentLines.toString();
     
     // Auto-validate
@@ -398,7 +350,7 @@ function syntaxHighlight(text: string, errors: ValidationError[] = []): string {
   
   // Step 8: Highlight errors with red underline
   if (errors.length > 0) {
-    processed = highlightErrors(processed, text, errors);
+    processed = highlightErrors(processed, errors);
   }
   
   return processed;
@@ -407,38 +359,21 @@ function syntaxHighlight(text: string, errors: ValidationError[] = []): string {
 /**
  * Highlight errors with red underline
  */
-function highlightErrors(processedText: string, originalText: string, errors: ValidationError[]): string {
-  let result = processedText;
-  
+/**
+ * Highlight errors with red underline
+ */
+function highlightErrors(processedText: string, errors: ValidationError[]): string {
+  const lines = processedText.split('\n');
   errors.forEach(error => {
-    if (error.line && error.column) {
-      const lines = originalText.split('\n');
-      if (error.line <= lines.length) {
-        const errorLine = lines[error.line - 1];
-        if (!errorLine) {
-          return;
-        }
-
-        const errorChar = errorLine[error.column - 1];
-        
-        if (errorChar) {
-          // Find the character in the processed text and wrap it with error span
-          const charRegex = new RegExp(escapeRegExp(errorChar), 'g');
-          let matchCount = 0;
-          result = result.replace(charRegex, (match) => {
-            matchCount++;
-            // Only highlight the character at the error position
-            if (matchCount === error.column) {
-              return `<span class="error-underline">${match}</span>`;
-            }
-            return match;
-          });
-        }
+    if (error.line && error.line <= lines.length) {
+      const line = lines[error.line - 1];
+      if (line && !line.includes('error-line-highlight')) {
+        lines[error.line - 1] = `<span class="error-line-highlight">${line}</span>`;
       }
     }
   });
   
-  return result;
+  return lines.join('\n');
 }
 
 /**

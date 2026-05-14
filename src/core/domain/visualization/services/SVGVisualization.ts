@@ -100,6 +100,7 @@ export class SVGVisualizer {
   /**
    * Render a complete DSL program as SVG.
    */
+
   renderProgram(
     system: System,
     attribute: Attribute,
@@ -112,12 +113,44 @@ export class SVGVisualizer {
     svg.setAttribute('class', 'diagram-template');
     this.forceArial(svg);
 
-    this.setText(svg, 'text76', attribute.artifact.name);
+    // 1. Prepare all wrapped lines
+    const artifactLines = this.wrapFixedWidth(attribute.artifact.name, 15);
+    const sourceLines = this.wrapFixedWidth(attribute.scenario.source.text, 18);
+    const stimulusLines = this.wrapFixedWidth(attribute.scenario.stimulus.text, 16);
+    const environmentLines = this.wrapFixedWidth(attribute.scenario.environment.text, 18);
+    const responseLines = this.wrapFixedWidth(attribute.scenario.response.text, 18);
+    const measureLines = this.wrapFixedWidth(attribute.scenario.measure.text, 16);
+
+    // 2. Calculate growth heights
+    const artifactExtraHeight = Math.max(0, (artifactLines.length - 1) * 16);
+    
+    // Calculate scenario text growth (extra lines beyond what template allocated)
+    const extraSource = Math.max(0, sourceLines.length - 1);
+    const extraStimulus = Math.max(0, stimulusLines.length - 2);
+    const extraEnv = Math.max(0, environmentLines.length - 1);
+    const extraResp = Math.max(0, responseLines.length - 1);
+    const extraMeasure = Math.max(0, measureLines.length - 2);
+    
+    const maxExtraScenarioLines = Math.max(extraSource, extraStimulus, extraEnv, extraResp, extraMeasure);
+    const scenarioExtraHeight = maxExtraScenarioLines * 18;
+
+    // 3. Render content
+    const text76 = svg.querySelector('#text76') as SVGTextElement;
+    if (text76) {
+      this.setMultiLineContent(text76, artifactLines, 'middle');
+      text76.setAttribute('transform', 'translate(353, 90)');
+    }
+
     this.setWrappedText(svg, ['text100'], attribute.scenario.source.text);
     this.setWrappedText(svg, ['text108', 'text112'], attribute.scenario.stimulus.text);
     this.setWrappedText(svg, ['text120'], attribute.scenario.environment.text);
     this.setWrappedText(svg, ['text128'], attribute.scenario.response.text);
     this.setWrappedText(svg, ['text136', 'text140'], attribute.scenario.measure.text);
+
+    // 4. Adjust layout (Box growth and pushing)
+    this.adjustLayout(svg, artifactExtraHeight, scenarioExtraHeight, artifactLines.length);
+
+    // 5. Info and metadata
     this.setText(svg, 'text162', system.name);
     this.setText(svg, 'text180', attribute.name);
     this.setText(svg, 'text198', attribute.category.toString());
@@ -126,6 +159,115 @@ export class SVGVisualizer {
 
     return new XMLSerializer().serializeToString(svg);
   }
+
+  private adjustLayout(svg: Element, artifactExtra: number, scenarioExtra: number, artifactLineCount: number): void {
+    // A. Resize and adjust artifact box
+    const pathIds = ['path66', 'path68'];
+    pathIds.forEach(id => {
+      const path = svg.querySelector(`#${id}`);
+      if (path) {
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('id', id);
+        rect.setAttribute('x', '282');
+        rect.setAttribute('y', '48');
+        rect.setAttribute('width', '142');
+        rect.setAttribute('height', String(60 + artifactExtra));
+        rect.setAttribute('rx', '19');
+        rect.setAttribute('ry', '19');
+        const style = path.getAttribute('style');
+        if (style) rect.setAttribute('style', style);
+        path.replaceWith(rect);
+      }
+    });
+
+    const text76 = svg.querySelector('#text76');
+    if (text76 && artifactLineCount > 2) {
+      const yAdjust = (artifactLineCount - 1) * 2;
+      text76.setAttribute('transform', `translate(353, ${90 + yAdjust})`);
+    }
+
+    // B. Calculate pushes
+    const scenarioPush = artifactExtra + 10;
+    
+    // We use a much larger buffer for the info box to ensure it's well below everything
+    const infoPush = scenarioPush + scenarioExtra + 50; 
+
+    const scenarioElements = [
+      'text96', 'text104', 'text116', 'text124', 'text132',
+      'text100', 'text108', 'text112', 'text120', 'text128', 'text136', 'text140'
+    ];
+    const infoElements = ['path142', 'path144', 'g146', 'g164', 'g182', 'g200'];
+
+    scenarioElements.forEach(id => this.moveElement(svg, id, scenarioPush));
+    infoElements.forEach(id => this.moveElement(svg, id, infoPush));
+
+    // C. Resize SVG viewport to fit grown content precisely
+    const baseWidth = 706.56;
+    
+    // Calculate the absolute bottom of the visible content
+    let tightHeight: number;
+    const showInfo = svg.querySelector('#path142')?.getAttribute('display') !== 'none';
+    
+    if (showInfo) {
+      // Info box bottom: original 290 + push
+      tightHeight = 290 + infoPush + 10; // 10px tiny buffer
+    } else {
+      // Scenario section bottom: 
+      // Scenario values start at 159 (relative to artifact bottom)
+      // We moved labels and values by scenarioPush.
+      // 177 was the original bottom of the 2nd line of stimulus/measure.
+      tightHeight = 177 + scenarioPush + scenarioExtra + 30;
+    }
+    
+    svg.setAttribute('height', String(tightHeight));
+    svg.setAttribute('width', String(baseWidth));
+    // xMid = center horizontally, YMin = align to top
+    svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
+    
+    // Handle viewBox
+    const viewBox = svg.getAttribute('viewBox');
+    if (viewBox) {
+      const parts = viewBox.split(/[,\s]+/).filter(Boolean);
+      if (parts.length === 4) {
+        parts[3] = String(tightHeight);
+        svg.setAttribute('viewBox', parts.join(' '));
+      }
+    }
+  }
+
+  private moveElement(svg: Element, id: string, dy: number): void {
+    const element = svg.querySelector(`#${id}`);
+    if (!element) return;
+
+    const transform = element.getAttribute('transform') || '';
+    
+    // Check for existing translate(x, y) or translate(x y)
+    const translateRegex = /translate\s*\(\s*([^,\s]+)[,\s]+([^)\s]+)\s*\)/;
+    const match = translateRegex.exec(transform);
+    
+    if (match) {
+      const x = match[1];
+      const y = Number.parseFloat(match[2]!);
+      const newTransform = transform.replace(translateRegex, `translate(${x}, ${y + dy})`);
+      element.setAttribute('transform', newTransform);
+    } else {
+      // If no translate, but has other transforms (like matrix), prepend translate
+      if (transform) {
+        element.setAttribute('transform', `translate(0, ${dy}) ${transform}`);
+      } else {
+        // If it's a text element, we can try to update 'y' directly for better compatibility
+        const yAttr = element.getAttribute('y');
+        if (yAttr && element.tagName === 'text') {
+          element.setAttribute('y', String(Number.parseFloat(yAttr) + dy));
+        } else {
+          // Default to applying a translate transform
+          element.setAttribute('transform', `translate(0, ${dy})`);
+        }
+      }
+    }
+  }
+
+
 
   /**
    * Render errors as SVG text.
@@ -186,7 +328,8 @@ export class SVGVisualizer {
   }
 
   private setWrappedText(svg: Element, ids: TextLineIds, value: string): void {
-    const lines = this.wrapFixedWidth(value || '', ids.length === 1 ? 18 : 16, ids.length);
+    const maxLines = ids.length;
+    const lines = this.wrapFixedWidth(value || '', ids.length === 1 ? 18 : 16);
 
     ids.forEach((id, index) => {
       if (!id) return;
@@ -195,8 +338,16 @@ export class SVGVisualizer {
       if (!text) return;
 
       const line = lines[index] ?? '';
-      this.setTextContent(text, line);
-      text.setAttribute('display', line ? 'inline' : 'none');
+      
+      // If this is the last available ID and we have more lines, append them to this text element
+      if (index === ids.length - 1 && lines.length > ids.length) {
+        const extraLines = lines.slice(index);
+        this.setMultiLineContent(text, extraLines);
+        text.setAttribute('display', 'inline');
+      } else {
+        this.setTextContent(text, line);
+        text.setAttribute('display', line ? 'inline' : 'none');
+      }
     });
   }
 
@@ -215,6 +366,25 @@ export class SVGVisualizer {
     if (tspan) {
       tspan.setAttribute('x', '0');
     }
+  }
+
+  private setMultiLineContent(textElement: Element, lines: string[], textAnchor: 'start' | 'middle' | 'end' = 'start'): void {
+    // Clear existing content
+    textElement.textContent = '';
+    
+    if (textAnchor !== 'start') {
+      textElement.setAttribute('text-anchor', textAnchor);
+    }
+    
+    lines.forEach((line, index) => {
+      const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+      tspan.textContent = this.escapeDisplayText(line);
+      tspan.setAttribute('x', '0');
+      if (index > 0) {
+        tspan.setAttribute('dy', '1.2em');
+      }
+      textElement.appendChild(tspan);
+    });
   }
 
   private forceArial(svg: Element): void {
@@ -238,19 +408,34 @@ export class SVGVisualizer {
     });
   }
 
-  private wrapFixedWidth(value: string, maxChars: number, maxLines: number): string[] {
+  private wrapFixedWidth(value: string, maxChars: number): string[] {
     const words = value.trim().split(/\s+/).filter(Boolean);
     const lines: string[] = [];
     let current = '';
 
     words.forEach(word => {
-      const next = current ? `${current} ${word}` : word;
-
-      if (next.length > maxChars && current) {
-        lines.push(current);
-        current = word;
+      // Handle very long words by breaking them
+      if (word.length > maxChars) {
+        if (current) {
+          lines.push(current);
+          current = '';
+        }
+        
+        let remaining = word;
+        while (remaining.length > maxChars) {
+          lines.push(remaining.slice(0, maxChars));
+          remaining = remaining.slice(maxChars);
+        }
+        current = remaining;
       } else {
-        current = next;
+        const next = current ? `${current} ${word}` : word;
+
+        if (next.length > maxChars && current) {
+          lines.push(current);
+          current = word;
+        } else {
+          current = next;
+        }
       }
     });
 
@@ -258,24 +443,7 @@ export class SVGVisualizer {
       lines.push(current);
     }
 
-    if (lines.length <= maxLines) {
-      return lines;
-    }
-
-    const visible = lines.slice(0, maxLines);
-    const lastIndex = visible.length - 1;
-    const overflow = lines.slice(maxLines).join(' ');
-    const lastLine = `${visible[lastIndex] ?? ''} ${overflow}`.trim();
-    visible[lastIndex] = this.truncate(lastLine, maxChars);
-    return visible;
-  }
-
-  private truncate(value: string, maxChars: number): string {
-    if (value.length <= maxChars) {
-      return value;
-    }
-
-    return `${value.slice(0, Math.max(0, maxChars - 3)).trimEnd()}...`;
+    return lines;
   }
 
   private escapeDisplayText(value: string): string {

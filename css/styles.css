@@ -57,7 +57,8 @@ body {
 }
 
 .line-numbers::-webkit-scrollbar {
-  display: none; /* Chrome/Safari/Opera */
+  display: none;
+  /* Chrome/Safari/Opera */
 }
 
 textarea {
@@ -115,43 +116,90 @@ textarea {
   /* Force scrollbar to always be visible to maintain consistent width */
   scrollbar-gutter: stable;
   /* Hide scrollbar but keep functionality */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE/Edge */
 }
 
 .syntax-highlight::-webkit-scrollbar {
-  display: none; /* Chrome/Safari/Opera */
+  display: none;
+  /* Chrome/Safari/Opera */
 }
 
 .syntax-highlight .new-char {
-  animation: charAppear 0.4s ease-out;
-  animation-fill-mode: both;
+  /* Animation removed for better editor performance */
 }
 
 @keyframes charAppear {
-  from {
-    opacity: 0;
-    transform: translateX(-5px) scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
+  /* Animation removed */
 }
 
 
 /* Syntax highlighting colors - maximum brightness for dark background */
-.text { color: #e6e6e6; } /* Base text color */
-.keyword { color: #e879f9; font-weight: bold; } /* Bright purple */
-.system { color: #38bdf8; font-weight: bold; } /* Bright blue */
-.attribute { color: #f43f5e; font-weight: bold; } /* Bright red */
-.field { color: #fbbf24; font-weight: bold; } /* Bright yellow */
-.identifier { color: #ffffff; font-weight: bold; } /* Pure white bold */
-.string { color: #4ade80; } /* Bright green */
-.category { color: #06b6d4; font-weight: bold; } /* Bright cyan */
-.comment { color: #9ca3af; font-style: italic; } /* Light gray */
-.number { color: #fbbf24; font-weight: bold; } /* Bright yellow bold */
-.punctuation { color: #e5e7eb; } /* Very light gray */
+.text {
+  color: #e6e6e6;
+}
+
+/* Base text color */
+.keyword {
+  color: #e879f9;
+  font-weight: bold;
+}
+
+/* Bright purple */
+.system {
+  color: #38bdf8;
+  font-weight: bold;
+}
+
+/* Bright blue */
+.attribute {
+  color: #f43f5e;
+  font-weight: bold;
+}
+
+/* Bright red */
+.field {
+  color: #fbbf24;
+  font-weight: bold;
+}
+
+/* Bright yellow */
+.identifier {
+  color: #ffffff;
+  font-weight: bold;
+}
+
+/* Pure white bold */
+.string {
+  color: #4ade80;
+}
+
+/* Bright green */
+.category {
+  color: #06b6d4;
+  font-weight: bold;
+}
+
+/* Bright cyan */
+.comment {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Light gray */
+.number {
+  color: #fbbf24;
+  font-weight: bold;
+}
+
+/* Bright yellow bold */
+.punctuation {
+  color: #e5e7eb;
+}
+
+/* Very light gray */
 
 .toolbar {
   display: flex;
@@ -204,7 +252,7 @@ canvas {
   height: 100%;
   min-height: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* Align to top */
   justify-content: center;
   cursor: grab;
   position: relative;
@@ -350,10 +398,13 @@ canvas {
   width: 100%;
 }
 
-.diagram-template svg {
+.diagram-template {
   overflow: visible;
-  max-width: 100%;
+  display: block;
+  width: 100%;
   height: auto;
+  max-width: 100%;
+  margin-top: 0; /* Ensure no top margin */
 }
 
 .diagram-template .artifact-artifact-box {
@@ -392,9 +443,8 @@ canvas {
 
 .diagram-template .info-row {
   margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-wrap: break-word;
 }
 
 /* Container for artifact box with slide controls */
@@ -498,12 +548,12 @@ canvas {
   .diagram-template .fila {
     gap: 16px;
   }
-  
+
   .diagram-template .texto {
     font-size: 13px;
     width: 110px;
   }
-  
+
   .diagram-template .artifact-artifact-box {
     width: 110px;
     font-size: 12px;
@@ -514,12 +564,12 @@ canvas {
   .diagram-template .fila {
     gap: 18px;
   }
-  
+
   .diagram-template .texto {
     font-size: 14px;
     width: 120px;
   }
-  
+
   .diagram-template .artifact-artifact-box {
     width: 120px;
     font-size: 13px;
@@ -645,11 +695,11 @@ canvas {
   border-bottom: none;
 }
 
-.error-underline {
-  text-decoration: underline;
-  text-decoration-color: #ff4d4f;
-  text-decoration-style: wavy;
-  text-decoration-thickness: 2px;
+.error-line-highlight {
+  background: rgba(255, 77, 79, 0.15);
+  border-bottom: 2px wavy #ff4d4f;
+  display: block;
+  width: 100%;
 }
 
 .error-position {
