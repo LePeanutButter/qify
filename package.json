@@ -8,7 +8,7 @@
     "dev": "vite",
     "server": "node server.js",
     "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
-    "build": "tsc -p config && vite build",
+    "build": "tsc -p config && vite build && node fix-assets.js",
     "preview": "vite preview",
     "lint": "eslint . --ext .ts,.tsx --fix",
     "lint:check": "eslint . --ext .ts,.tsx",
