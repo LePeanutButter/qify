@@ -34,10 +34,13 @@ export class EditorManager {
    */
   setupEventListeners(): void {
     if (this.codeTextarea) {
+      // Use input for content changes and scroll for positioning
       this.codeTextarea.addEventListener('input', () => this.handleCodeInput());
-      this.codeTextarea.addEventListener('keyup', () => this.handleCodeInput());
       this.codeTextarea.addEventListener('scroll', () => this.syncScroll());
       this.codeTextarea.addEventListener('keydown', (e) => this.handleKeyDown(e));
+      
+      // Sync on initial load
+      this.syncScroll();
     }
 
     // Close examples when clicking outside
@@ -56,21 +59,55 @@ export class EditorManager {
     if (!this.codeTextarea || !this.syntaxHighlightDiv) return;
 
     const text = this.codeTextarea.value;
+    
+    // 1. Validate DSL first to get latest errors
     const parseResult = DSLParser.parseDSL(text);
     const errors = parseResult.errors || [];
 
-    // Update syntax highlighting
+    // 2. Update syntax highlighting with error info
     this.syntaxHighlightDiv.innerHTML = SyntaxHighlighter.highlight(text, errors);
 
-    // Update line numbers
+    // 3. Update line numbers with wrap support
     if (this.lineNumbersDiv) {
       const lines = text.split('\n');
-      this.lineNumbersDiv.innerHTML = lines.map((_, i) => `<div>${i + 1}</div>`).join('');
+      
+      // Create or get mirror element for height calculation
+      let mirror = document.getElementById('line-mirror');
+      if (!mirror) {
+        mirror = document.createElement('div');
+        mirror.id = 'line-mirror';
+        // Match textarea styles exactly
+        mirror.style.position = 'absolute';
+        mirror.style.visibility = 'hidden';
+        mirror.style.whiteSpace = 'pre-wrap';
+        mirror.style.wordWrap = 'break-word';
+        mirror.style.fontFamily = '"Fira Code", monospace';
+        mirror.style.fontSize = '14px';
+        mirror.style.lineHeight = '22px';
+        mirror.style.width = this.codeTextarea.clientWidth + 'px';
+        mirror.style.padding = '0';
+        mirror.style.tabSize = '2';
+        document.body.appendChild(mirror);
+      } else {
+        mirror.style.width = this.codeTextarea.clientWidth + 'px';
+      }
+
+      let lineNumbersHTML = '';
+      for (let i = 0; i < lines.length; i++) {
+        // Measure height of this logical line
+        mirror.textContent = lines[i] || ' ';
+        const height = mirror.offsetHeight;
+        lineNumbersHTML += `<div style="height: ${height}px">${i + 1}</div>`;
+      }
+      this.lineNumbersDiv.innerHTML = lineNumbersHTML;
     }
 
     this.syntaxHighlightDiv.dataset['lineCount'] = text.split('\n').length.toString();
 
-    // Validate and Render
+    // 4. Sync scroll immediately (especially if line count changed)
+    this.syncScroll();
+
+    // 5. Update Status and Render
     this.validate(text);
     if (text.trim()) {
       this.render(text);

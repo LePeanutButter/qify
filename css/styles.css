@@ -45,15 +45,21 @@ body {
   color: #9ca3af;
   font-family: "Fira Code", monospace;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 22px; /* Match textarea */
   text-align: right;
   padding-right: 10px;
+  padding-top: 0px;
   user-select: none;
   z-index: 1;
   border-radius: 4px 0 0 4px;
   overflow: hidden;
   white-space: pre;
   pointer-events: none;
+  box-sizing: border-box;
+}
+
+.line-numbers div {
+  height: 22px; /* Default height for logical lines */
 }
 
 .line-numbers::-webkit-scrollbar {
@@ -72,8 +78,8 @@ textarea {
   color: transparent;
   font-family: "Fira Code", monospace;
   font-size: 14px;
-  line-height: 1.5;
-  white-space: pre-wrap;
+  line-height: 22px; /* Fixed line height for better sync */
+  white-space: pre-wrap; /* Enable word wrap */
   word-wrap: break-word;
   outline: none;
   resize: none;
@@ -82,12 +88,11 @@ textarea {
   padding: 0;
   margin: 0;
   box-sizing: border-box;
-  overflow: auto;
-  /* Ensure consistent text rendering */
+  overflow-y: auto;
+  overflow-x: hidden;
   text-align: left;
   letter-spacing: normal;
-  tab-size: 4;
-  /* Force scrollbar to always be visible to maintain consistent width */
+  tab-size: 2;
   scrollbar-gutter: stable;
 }
 
@@ -101,25 +106,19 @@ textarea {
   color: #e6e6e6;
   font-family: "Fira Code", monospace;
   font-size: 14px;
-  line-height: 1.5;
-  white-space: pre-wrap;
+  line-height: 22px; /* Must match textarea */
+  white-space: pre-wrap; /* Match textarea */
   word-wrap: break-word;
   pointer-events: none;
   z-index: 1;
-  overflow: auto;
+  overflow: hidden; /* Controlled by textarea scroll */
   padding: 0;
   margin: 0;
   box-sizing: border-box;
   text-align: left;
   letter-spacing: normal;
-  tab-size: 4;
-  /* Force scrollbar to always be visible to maintain consistent width */
+  tab-size: 2;
   scrollbar-gutter: stable;
-  /* Hide scrollbar but keep functionality */
-  scrollbar-width: none;
-  /* Firefox */
-  -ms-overflow-style: none;
-  /* IE/Edge */
 }
 
 .syntax-highlight::-webkit-scrollbar {

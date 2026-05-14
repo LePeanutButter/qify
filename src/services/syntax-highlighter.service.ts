@@ -10,60 +10,54 @@ export class SyntaxHighlighter {
    * Apply syntax highlighting to the provided text
    */
   static highlight(text: string, errors: ValidationError[] = []): string {
-    // Step 1: Escape HTML entities FIRST
+    // Step 1: Escape HTML entities FIRST to avoid issues with < or >
     let processed = escapeHtml(text);
 
-    // Step 2: Mark strings with placeholders to protect them
+    // Step 2: Extract and protect strings
     const stringPlaceholders: string[] = [];
-    let placeholderIndex = 0;
-
-    processed = processed.replaceAll(/&quot;([^&]*)&quot;/g, (_match, content) => {
-      const placeholder = `__STRING_${placeholderIndex}__`;
-      stringPlaceholders[placeholderIndex] = `<span class="string">"${content}"</span>`;
-      placeholderIndex++;
-      return placeholder;
-    });
-
-    processed = processed.replaceAll(/&#39;([^&]*)&#39;/g, (_match, content) => {
-      const placeholder = `__STRING_${placeholderIndex}__`;
-      stringPlaceholders[placeholderIndex] = `<span class="string">'${content}'</span>`;
-      placeholderIndex++;
+    // This regex looks for escaped &quot; and &#39; which were created by escapeHtml
+    const stringRegex = /(&quot;.*?&quot;|&#39;.*?&#39;)/g;
+    
+    processed = processed.replace(stringRegex, (match) => {
+      const placeholder = `__STRP_${stringPlaceholders.length}__`;
+      stringPlaceholders.push(`<span class="string">${match}</span>`);
       return placeholder;
     });
 
     // Step 3: Highlight system and attribute names
-    processed = processed.replaceAll(/\bsystem\s+([A-Za-z_]\w*)\b/g, 'system <span class="number">$1</span>');
-    processed = processed.replaceAll(/\battribute\s+([A-Za-z_]\w*)\b/g, 'attribute <span class="number">$1</span>');
+    // system Name { ... }
+    processed = processed.replace(/\b(system|attribute)\b\s+([A-Za-z_]\w*)/g, (match, kw, name) => {
+      return `<span class="keyword">${kw}</span> <span class="number">${name}</span>`;
+    });
 
-    // Step 4: Highlight keywords - but NOT inside placeholders
+    // Step 4: Highlight keywords (only if not already highlighted)
     KEYWORDS.forEach(keyword => {
-      const parts = processed.split(/(__STRING_\d+__)/);
-      const processedParts = parts.map((part, index) => {
-        if (index % 2 === 0) {
-          return part.replaceAll(new RegExp(String.raw`\b${escapeRegExp(keyword)}\b`, 'g'), `<span class="keyword">${keyword}</span>`);
-        }
-        return part;
-      });
-      processed = processedParts.join('');
+      const regex = new RegExp(`(?<!<span[^>]*>)\\b${escapeRegExp(keyword)}\\b(?!</span>)`, 'g');
+      processed = processed.replace(regex, `<span class="keyword">${keyword}</span>`);
     });
 
     // Step 5: Highlight categories
     const sortedCategories = [...CATEGORIES].sort((a, b) => b.length - a.length);
     sortedCategories.forEach(category => {
-      const regex = new RegExp(String.raw`\b${escapeRegExp(category)}\b`, 'g');
-      processed = processed.replaceAll(regex, `<span class="category">${category}</span>`);
+      const regex = new RegExp(`(?<!<span[^>]*>)\\b${escapeRegExp(category)}\\b(?!</span>)`, 'g');
+      processed = processed.replace(regex, `<span class="category">${category}</span>`);
     });
 
     // Step 6: Highlight comments
-    processed = processed.replaceAll(/(\/\/.*$)/gm, '<span class="comment">$1</span>');
-    processed = processed.replaceAll(/(\/\*[\s\S]*?\*\/)/g, '<span class="comment">$1</span>');
+    processed = processed.replace(/(\/\/.*$)/gm, '<span class="comment">$1</span>');
+    processed = processed.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="comment">$1</span>');
 
-    // Step 7: Restore strings from placeholders
+    // Step 7: Restore protected strings
     stringPlaceholders.forEach((replacement, index) => {
-      processed = processed.replace(`__STRING_${index}__`, replacement);
+      processed = processed.replace(`__STRP_${index}__`, replacement);
     });
 
-    // Step 8: Highlight errors with red underline
+    // Step 8: Ensure trailing newline is visible to match textarea scroll height
+    if (text.endsWith('\n')) {
+      processed += ' ';
+    }
+
+    // Step 9: Highlight errors
     if (errors.length > 0) {
       processed = this.highlightErrors(processed, errors);
     }

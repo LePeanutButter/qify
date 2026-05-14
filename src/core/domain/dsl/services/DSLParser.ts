@@ -3,6 +3,7 @@
  * Handles parsing of DSL text into structured AST and program objects
  */
 
+import { CATEGORIES } from '../../../../constants/dsl.constants';
 import type {
   DSLProgram,
   Token,
@@ -139,7 +140,11 @@ export class DSLParser {
       } else if (this.match('KEYWORD_ATTRIBUTE')) {
         const attributeNode = this.parseAttributeDeclaration();
         if (attributeNode) children.push(attributeNode);
+      } else if (this.check('WHITESPACE')) {
+        this.advance();
       } else {
+        const token = this.peek();
+        this.addError(`Unexpected token '${token.value}'`, token.position, 'error');
         this.advance();
       }
     }
@@ -176,39 +181,38 @@ export class DSLParser {
     const attributeIdentifier = this.consume('IDENTIFIER', 'Expected attribute name');
     if (!attributeIdentifier) return null;
 
-    this.consume('LBRACE', 'Expected \'{\'');
+    if (!this.consume('LBRACE', 'Expected \'{\'')) return null;
 
     const children: ASTNode[] = [];
     
-    // Parse artifact
-    if (this.match('KEYWORD_ARTIFACT')) {
-      const artifactNode = this.parseArtifactDeclaration();
-      if (artifactNode) children.push(artifactNode);
+    // Parse properties with error recovery
+    while (!this.check('RBRACE') && !this.isAtEnd()) {
+      if (this.match('KEYWORD_ARTIFACT')) {
+        const artifactNode = this.parseArtifactDeclaration();
+        if (artifactNode) children.push(artifactNode);
+      } else if (this.match('KEYWORD_CATEGORY')) {
+        const categoryNode = this.parseCategoryDeclaration();
+        if (categoryNode) children.push(categoryNode);
+      } else if (this.match('KEYWORD_SHOW_INFO')) {
+        const showInfoNode = this.parseShowInfoDeclaration();
+        if (showInfoNode) children.push(showInfoNode);
+      } else if (this.check('KEYWORD_SOURCE') || this.check('KEYWORD_STIMULUS') || 
+                 this.check('KEYWORD_ENVIRONMENT') || this.check('KEYWORD_RESPONSE') || 
+                 this.check('KEYWORD_MEASURE')) {
+        const scenarioNode = this.parseScenarioDeclaration();
+        if (scenarioNode) children.push(scenarioNode);
+      } else if (this.check('WHITESPACE')) {
+        this.advance();
+      } else {
+        const token = this.peek();
+        this.addError(`Unexpected attribute property '${token.value}'`, token.position, 'error');
+        this.advance();
+      }
     }
 
-    // Parse category
-    if (this.match('KEYWORD_CATEGORY')) {
-      const categoryNode = this.parseCategoryDeclaration();
-      if (categoryNode) children.push(categoryNode);
+    if (!this.consume('RBRACE', 'Expected \'}\'')) {
+      // Sync to next block or EOF
     }
-
-    // Optional visual flag: showInfo or showInfo: true|false
-    if (this.match('KEYWORD_SHOW_INFO')) {
-      const showInfoNode = this.parseShowInfoDeclaration();
-      if (showInfoNode) children.push(showInfoNode);
-    }
-
-    // Parse scenario
-    const scenarioNode = this.parseScenarioDeclaration();
-    if (scenarioNode) children.push(scenarioNode);
-
-    // Optional visual flag: showInfo or showInfo: true|false
-    if (this.match('KEYWORD_SHOW_INFO')) {
-      const showInfoNode = this.parseShowInfoDeclaration();
-      if (showInfoNode) children.push(showInfoNode);
-    }
-
-    this.consume('RBRACE', 'Expected \'}\'');
 
     return {
       type: 'AttributeDeclaration',
@@ -258,6 +262,11 @@ export class DSLParser {
       const partToken = this.consume('IDENTIFIER', 'Expected category part');
       if (!partToken) break;
       categoryValue += `.${partToken.value}`;
+    }
+
+    // Validation: Check if category exists in constants
+    if (!CATEGORIES.includes(categoryValue)) {
+      this.addError(`Invalid category '${categoryValue}'. Must be a valid ISO 25010 category.`, position, 'error');
     }
 
     this.match('COMMA');
