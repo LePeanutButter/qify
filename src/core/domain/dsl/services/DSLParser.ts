@@ -192,9 +192,21 @@ export class DSLParser {
       if (categoryNode) children.push(categoryNode);
     }
 
+    // Optional visual flag: showInfo or showInfo: true|false
+    if (this.match('KEYWORD_SHOW_INFO')) {
+      const showInfoNode = this.parseShowInfoDeclaration();
+      if (showInfoNode) children.push(showInfoNode);
+    }
+
     // Parse scenario
     const scenarioNode = this.parseScenarioDeclaration();
     if (scenarioNode) children.push(scenarioNode);
+
+    // Optional visual flag: showInfo or showInfo: true|false
+    if (this.match('KEYWORD_SHOW_INFO')) {
+      const showInfoNode = this.parseShowInfoDeclaration();
+      if (showInfoNode) children.push(showInfoNode);
+    }
 
     this.consume('RBRACE', 'Expected \'}\'');
 
@@ -337,6 +349,45 @@ export class DSLParser {
     return this.createStringNode('MeasureDeclaration', stringToken);
   }
 
+  private parseShowInfoDeclaration(): ASTNode | null {
+    if (!this.match('COLON')) {
+      this.match('COMMA');
+
+      return {
+        type: 'ShowInfoDeclaration',
+        position: this.previous().position,
+        value: 'true',
+        children: [
+          {
+            type: 'BooleanLiteral',
+            position: this.previous().position,
+            value: 'true',
+            children: undefined
+          }
+        ]
+      };
+    }
+
+    const booleanToken = this.consume('BOOLEAN', 'Expected true or false');
+    this.match('COMMA');
+
+    if (!booleanToken) return null;
+
+    return {
+      type: 'ShowInfoDeclaration',
+      position: booleanToken.position,
+      value: booleanToken.value,
+      children: [
+        {
+          type: 'BooleanLiteral',
+          position: booleanToken.position,
+          value: booleanToken.value,
+          children: undefined
+        }
+      ]
+    };
+  }
+
   private createStringNode(type: ASTNodeType, token: Token | null): ASTNode | null {
     if (!token) return null;
     
@@ -426,6 +477,7 @@ export class DSLParser {
       name,
       artifact: { name: '' },
       category: 'FunctionalSuitability.FunctionalCompleteness',
+      showInfo: false,
       scenario: {
         source: { text: '' },
         stimulus: { text: '' },
@@ -446,6 +498,9 @@ export class DSLParser {
           break;
         case 'ScenarioDeclaration':
           attribute.scenario = this.astToScenario(child);
+          break;
+        case 'ShowInfoDeclaration':
+          attribute.showInfo = child.value !== 'false';
           break;
       }
     }
@@ -589,6 +644,8 @@ export class DSLParser {
       { type: 'KEYWORD_ENVIRONMENT', pattern: /\benvironment\b/ },
       { type: 'KEYWORD_RESPONSE', pattern: /\bresponse\b/ },
       { type: 'KEYWORD_MEASURE', pattern: /\bmeasure\b/ },
+      { type: 'KEYWORD_SHOW_INFO', pattern: /\bshowInfo\b/ },
+      { type: 'BOOLEAN', pattern: /\b(?:true|false)\b/ },
       { type: 'STRING', pattern: /"([^"]*)"/ },
       { type: 'IDENTIFIER', pattern: /[A-Za-z_]\w*/ },
       { type: 'NUMBER', pattern: /\b\d+(\.\d+)?\b/ },

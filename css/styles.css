@@ -211,7 +211,7 @@ canvas {
 }
 
 .diagram-template {
-  font-family: 'Noto Sans', sans-serif;
+  font-family: Arial, sans-serif;
   transition: transform 0.1s ease-out;
   transform-origin: center center;
 }
@@ -339,43 +339,72 @@ canvas {
   display: block;
 }
 
-.slide-controls {
+.canvas-controls {
   position: absolute;
-  bottom: 15px;
-  right: 15px;
+  right: 18px;
+  bottom: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 8px 15px;
-  border-radius: 20px;
-  border: 1px solid #d0d0d0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(15, 17, 21, 0.14);
+  padding: 4px;
+  backdrop-filter: blur(10px);
   z-index: 100;
 }
 
-.diagram-template .slide-btn {
-  background: #fff;
-  border: none;
-  color: #333;
-  padding: 4px 10px;
-  border-radius: 4px;
+.canvas-control-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: #111827;
+  padding: 0;
+  border-radius: 999px;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: bold;
-  transition: 0.2s;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  transition: background 0.16s ease, color 0.16s ease;
 }
 
-.diagram-template .slide-btn:hover {
-  color: #999;
+.canvas-control-btn.wide {
+  width: 38px;
+  font-size: 10px;
+  letter-spacing: 0;
 }
 
-.diagram-template .slide-counter {
-  font-size: 11px;
-  color: #666;
-  min-width: 40px;
+.canvas-control-btn:hover {
+  background: rgba(17, 24, 39, 0.08);
+  color: #000;
+}
+
+.diagram-counter {
+  min-width: 34px;
   text-align: center;
+  color: #111827;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 28px;
+  padding: 0 3px;
+}
+
+.diagram-counter .separator {
+  color: #6b7280;
+  padding: 0 2px;
+}
+
+.canvas-control-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(17, 24, 39, 0.14);
+  margin: 0 3px;
 }
 
 /* Responsive design for different screen sizes */

@@ -4,16 +4,24 @@
  */
 
 declare const localStorage: {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-  removeItem(key: string): void;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getItem(_key: string): string | null;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  setItem(_key: string, _value: string): void;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  removeItem(_key: string): void;
 };
 
 export enum LogLevel {
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   DEBUG = 0,
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   INFO = 1,
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   WARN = 2,
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   ERROR = 3,
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   FATAL = 4
 }
 
@@ -187,6 +195,7 @@ export class Logger {
   /**
    * Output log entry to console with formatting
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private outputToConsole(_entry: LogEntry): void {
     // Console output removed for production
   }
@@ -194,6 +203,7 @@ export class Logger {
   /**
    * Get console styling for log level
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private getConsoleStyle(level: LogLevel): string {
     switch (level) {
       case LogLevel.DEBUG:
@@ -275,36 +285,36 @@ export const logger = Logger.getInstance();
  * Convenience functions for common logging categories
  */
 export const log = {
-  debug: (message: string, data?: unknown) => logger.debug('app', message, data),
-  info: (message: string, data?: unknown) => logger.info('app', message, data),
-  warn: (message: string, data?: unknown) => logger.warn('app', message, data),
-  error: (message: string, error?: Error, data?: unknown) => logger.error('app', message, error, data),
-  fatal: (message: string, error?: Error, data?: unknown) => logger.fatal('app', message, error, data)
+  debug: (message: string, data?: unknown): void => { logger.debug('app', message, data); },
+  info: (message: string, data?: unknown): void => { logger.info('app', message, data); },
+  warn: (message: string, data?: unknown): void => { logger.warn('app', message, data); },
+  error: (message: string, error?: Error, data?: unknown): void => { logger.error('app', message, error, data); },
+  fatal: (message: string, error?: Error, data?: unknown): void => { logger.fatal('app', message, error, data); }
 };
 
 /**
  * Category-specific loggers
  */
 export const parserLog = {
-  debug: (message: string, data?: unknown) => logger.debug('parser', message, data),
-  info: (message: string, data?: unknown) => logger.info('parser', message, data),
-  warn: (message: string, data?: unknown) => logger.warn('parser', message, data),
-  error: (message: string, error?: Error, data?: unknown) => logger.error('parser', message, error, data),
-  fatal: (message: string, error?: Error, data?: unknown) => logger.fatal('parser', message, error, data)
+  debug: (message: string, data?: unknown): void => { logger.debug('parser', message, data); },
+  info: (message: string, data?: unknown): void => { logger.info('parser', message, data); },
+  warn: (message: string, data?: unknown): void => { logger.warn('parser', message, data); },
+  error: (message: string, error?: Error, data?: unknown): void => { logger.error('parser', message, error, data); },
+  fatal: (message: string, error?: Error, data?: unknown): void => { logger.fatal('parser', message, error, data); }
 };
 
 export const visualizerLog = {
-  debug: (message: string, data?: unknown) => logger.debug('visualizer', message, data),
-  info: (message: string, data?: unknown) => logger.info('visualizer', message, data),
-  warn: (message: string, data?: unknown) => logger.warn('visualizer', message, data),
-  error: (message: string, error?: Error, data?: unknown) => logger.error('visualizer', message, error, data),
-  fatal: (message: string, error?: Error, data?: unknown) => logger.fatal('visualizer', message, error, data)
+  debug: (message: string, data?: unknown): void => { logger.debug('visualizer', message, data); },
+  info: (message: string, data?: unknown): void => { logger.info('visualizer', message, data); },
+  warn: (message: string, data?: unknown): void => { logger.warn('visualizer', message, data); },
+  error: (message: string, error?: Error, data?: unknown): void => { logger.error('visualizer', message, error, data); },
+  fatal: (message: string, error?: Error, data?: unknown): void => { logger.fatal('visualizer', message, error, data); }
 };
 
 export const uiLog = {
-  debug: (message: string, data?: unknown) => logger.debug('ui', message, data),
-  info: (message: string, data?: unknown) => logger.info('ui', message, data),
-  warn: (message: string, data?: unknown) => logger.warn('ui', message, data),
-  error: (message: string, error?: Error, data?: unknown) => logger.error('ui', message, error, data),
-  fatal: (message: string, error?: Error, data?: unknown) => logger.fatal('ui', message, error, data)
+  debug: (message: string, data?: unknown): void => { logger.debug('ui', message, data); },
+  info: (message: string, data?: unknown): void => { logger.info('ui', message, data); },
+  warn: (message: string, data?: unknown): void => { logger.warn('ui', message, data); },
+  error: (message: string, error?: Error, data?: unknown): void => { logger.error('ui', message, error, data); },
+  fatal: (message: string, error?: Error, data?: unknown): void => { logger.fatal('ui', message, error, data); }
 };

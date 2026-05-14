@@ -85,14 +85,37 @@ attribute PerformanceCheckout {
   // Canvas dragging functionality
   let isDragging = false;
   let startX, startY;
-  let scrollLeft, scrollTop;
   let currentX = 0, currentY = 0;
+  let currentScale = 1;
 
   const visualization = document.getElementById('visualization');
+
+  function applyDiagramTransform() {
+    const diagramTemplate = visualization.querySelector('.diagram-template');
+    if (diagramTemplate) {
+      diagramTemplate.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
+    }
+  }
+
+  function clampZoom(value) {
+    return Math.max(0.5, Math.min(2.5, value));
+  }
+
+  window.zoomDiagram = function(factor) {
+    currentScale = clampZoom(currentScale * factor);
+    applyDiagramTransform();
+  };
+
+  window.resetDiagramZoom = function() {
+    currentX = 0;
+    currentY = 0;
+    currentScale = 1;
+    applyDiagramTransform();
+  };
   
   visualization.addEventListener('mousedown', function(e) {
     // Only start dragging with left mouse button
-    if (e.button === 0) {
+    if (e.button === 0 && !e.target.closest('.canvas-controls')) {
       isDragging = true;
       startX = e.pageX - currentX;
       startY = e.pageY - currentY;
@@ -108,11 +131,7 @@ attribute PerformanceCheckout {
     e.preventDefault();
     currentX = e.pageX - startX;
     currentY = e.pageY - startY;
-    
-    const diagramTemplate = visualization.querySelector('.diagram-template');
-    if (diagramTemplate) {
-      diagramTemplate.style.transform = `translate(${currentX}px, ${currentY}px)`;
-    }
+    applyDiagramTransform();
   });
 
   document.addEventListener('mouseup', function() {

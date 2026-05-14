@@ -2,43 +2,44 @@
 
 /**
  * TypeScript Visualizer for Quality Attribute DSL
- * Handles canvas-based visualization of DSL programs
+ * Pure SVG rendering - no HTML embedding, no foreignObject, no canvas
  */
 
 import type {
   DSLProgram,
-  System,
   Attribute,
   ValidationError,
   ValidationResult
 } from '../../dsl/types/DSL.types';
 import { DSLParser } from '../../dsl/services/DSLParser';
+import { SVGVisualizer } from './SVGVisualization';
 
 /**
  * Visual configuration interface
  */
 export interface VisualConfig {
-  colors: {
-    background: string;
-    system: string;
-    attribute: string;
-    artifact: string;
-    category: string;
-    scenario: string;
-    text: string;
-    error: string;
-    warning: string;
+  colors?: {
+    background?: string;
+    system?: string;
+    attribute?: string;
+    artifact?: string;
+    category?: string;
+    text?: string;
+    textLight?: string;
+    error?: string;
+    border?: string;
+    card?: string;
   };
-  fonts: {
-    title: string;
-    label: string;
-    small: string;
+  fonts?: {
+    titleSize?: number;
+    labelSize?: number;
+    smallSize?: number;
+    family?: string;
   };
-  spacing: {
-    margin: number;
-    padding: number;
-    gap: number;
-    lineHeight: number;
+  spacing?: {
+    margin?: number;
+    padding?: number;
+    gap?: number;
   };
 }
 
@@ -62,69 +63,46 @@ export interface ComponentData {
 
 /**
  * Main Visualizer class
- * Handles rendering of DSL programs to canvas
+ * Pure SVG rendering - no canvas, no HTML embedding
  */
 export class DSLVisualizer {
-  private readonly canvas: HTMLCanvasElement;
-  private readonly ctx: CanvasRenderingContext2D;
-  private readonly renderTarget: HTMLElement | null;
+  private readonly svgRenderer: SVGVisualizer;
+  private readonly svgContainer: HTMLElement | null;
   private currentProgram: DSLProgram | null = null;
   private currentDSLText: string = '';
   private currentAttributeIndex = 0;
   private errors: ValidationError[] = [];
+  private lastSvgString: string = '';
+  // Track navigation button visibility for compatibility with legacy UI callers
+  private navigationButtonsVisible = true;
   
-  // Visual configuration
-  private config: VisualConfig = {
-    colors: {
-      background: '#0c0e12',
-      system: '#4a9eff',
-      attribute: '#52c41a',
-      artifact: '#fa8c16',
-      category: '#722ed1',
-      scenario: '#eb2f96',
-      text: '#ffffff',
-      error: '#ff4d4f',
-      warning: '#faad14'
-    },
-    fonts: {
-      title: 'bold 16px Arial',
-      label: '12px Arial',
-      small: '10px Arial'
-    },
-    spacing: {
-      margin: 20,
-      padding: 15,
-      gap: 30,
-      lineHeight: 20
-    }
-  };
-
   /**
    * Create a new visualizer instance
-   * @param canvasId The ID of the canvas element
+   * @param svgContainerId The ID of the container element where SVG will be rendered
    */
-  constructor(canvasId: string, renderTargetId?: string) {
-    const canvasElement = document.getElementById(canvasId);
-    if (!canvasElement || !(canvasElement instanceof HTMLCanvasElement)) {
-      throw new Error(`Canvas element with ID '${canvasId}' not found`);
-    }
+  constructor(containerIdOrCanvasId: string, svgContainerId?: string) {
+    // Accept either a single svg container id (legacy) or two args: canvasId, svgContainerId
+    const primaryEl = document.getElementById(containerIdOrCanvasId);
 
-    this.canvas = canvasElement;
-    const context = canvasElement.getContext('2d');
-    if (!context) {
-      throw new Error('Failed to get 2D context from canvas');
-    }
-    this.ctx = context;
+    // Resolve the actual SVG container element
+    let resolvedSvgContainer: HTMLElement | null = null;
 
-    if (renderTargetId) {
-      const renderElement = document.getElementById(renderTargetId);
-      if (!renderElement) {
-        throw new Error(`Render target element with ID '${renderTargetId}' not found`);
+    if (svgContainerId) {
+      resolvedSvgContainer = document.getElementById(svgContainerId);
+      if (!resolvedSvgContainer) {
+        throw new Error(`SVG container element with ID '${svgContainerId}' not found`);
       }
-      this.renderTarget = renderElement;
+    } else if (primaryEl?.tagName === 'CANVAS') {
+      // If the primary element is a canvas, prefer a sibling/container with id 'visualization'
+      resolvedSvgContainer = document.getElementById('visualization') ?? primaryEl;
+    } else if (primaryEl) {
+      resolvedSvgContainer = primaryEl;
     } else {
-      this.renderTarget = null;
+      throw new Error(`Container element with ID '${containerIdOrCanvasId}' not found`);
     }
+
+    this.svgContainer = resolvedSvgContainer;
+    this.svgRenderer = new SVGVisualizer();
   }
 
   /**
@@ -138,7 +116,7 @@ export class DSLVisualizer {
       this.currentDSLText = dslText;
       this.currentAttributeIndex = 0;
       
-      // Parse DSL (this would use the actual DSL parser)
+      // Parse DSL
       this.currentProgram = this.parseDSL(dslText);
       
       // Validate program
@@ -150,14 +128,13 @@ export class DSLVisualizer {
       return {
         success: this.errors.length === 0,
         errors: this.errors,
-        imageData: this.canvas.toDataURL()
+        imageData: this.lastSvgString
       };
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown visualization error';
       this.errors = [{ message: errorMessage, severity: 'error' }];
-      this.clearCanvas();
-      this.drawError(errorMessage);
+      this.renderError(errorMessage);
 
       return {
         success: false,
@@ -167,23 +144,55 @@ export class DSLVisualizer {
   }
 
   /**
-   * Clear the canvas
+   * Clear and re-render the current visualization
    */
-  clearCanvas(): void {
-    this.ctx.fillStyle = this.config.colors.background;
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  private renderCurrentVisualization(): void {
+    const activeAttribute = this.getCurrentAttribute();
+    
+    if (!this.currentProgram || !activeAttribute) {
+      return;
+    }
 
-    if (this.renderTarget) {
-      this.renderTarget.innerHTML = '';
+    // Generate SVG
+    this.lastSvgString = this.svgRenderer.renderProgram(
+      this.currentProgram.system,
+      activeAttribute,
+      this.currentAttributeIndex,
+      { showInfo: this.getShowInfoForAttribute(activeAttribute) }
+    );
+
+    // Render SVG to DOM
+    if (this.svgContainer) {
+      this.svgContainer.innerHTML = this.lastSvgString;
+      this.renderCanvasControls();
+    }
+
+    if (this.errors.length > 0) {
+      // Optionally log validation errors
+      // eslint-disable-next-line no-console
+      console.warn('Validation errors:', this.errors);
     }
   }
 
   /**
-   * Get the current navigation state.
+   * Render error message to SVG
+   */
+  private renderError(message: string): void {
+    const errorSvg = this.svgRenderer.renderErrors([
+      { message, severity: 'error' }
+    ]);
+    this.lastSvgString = errorSvg;
+
+    if (this.svgContainer) {
+      this.svgContainer.innerHTML = errorSvg;
+    }
+  }
+
+  /**
+   * Get the current navigation state
    */
   getAttributeNavigationState(): { current: number; total: number } {
     const total = this.currentProgram?.allAttributes.length ?? 0;
-
     return {
       current: total === 0 ? 0 : this.currentAttributeIndex + 1,
       total
@@ -191,14 +200,14 @@ export class DSLVisualizer {
   }
 
   /**
-   * Get the active parsed program.
+   * Get the active parsed program
    */
   getCurrentProgram(): DSLProgram | null {
     return this.currentProgram;
   }
 
   /**
-   * Move to the next attribute and redraw.
+   * Move to the next attribute and redraw
    */
   nextAttribute(): { current: number; total: number } | null {
     if (!this.currentProgram || this.currentProgram.allAttributes.length === 0) return null;
@@ -210,7 +219,7 @@ export class DSLVisualizer {
   }
 
   /**
-   * Move to the previous attribute and redraw.
+   * Move to the previous attribute and redraw
    */
   previousAttribute(): { current: number; total: number } | null {
     if (!this.currentProgram || this.currentProgram.allAttributes.length === 0) return null;
@@ -222,7 +231,7 @@ export class DSLVisualizer {
   }
 
   /**
-   * Set the active attribute index and redraw.
+   * Set the active attribute index and redraw
    */
   setCurrentAttributeIndex(index: number): void {
     if (!this.currentProgram || this.currentProgram.allAttributes.length === 0) return;
@@ -233,550 +242,91 @@ export class DSLVisualizer {
   }
 
   /**
-   * Get the current attribute, if any.
+   * Hide navigation buttons (compat shim).
+   * Returns previous visibility state so callers can restore it.
    */
-  private getCurrentAttribute(): Attribute | null {
-    if (!this.currentProgram || this.currentProgram.allAttributes.length === 0) return null;
+  hideNavigationButtons(): boolean {
+    const prev = this.navigationButtonsVisible;
+    this.navigationButtonsVisible = false;
 
-    return this.currentProgram.allAttributes[this.currentAttributeIndex] ?? null;
-  }
-
-  /**
-   * Redraw the canvas and preview for the current attribute.
-   */
-  private renderCurrentVisualization(): void {
-    this.clearCanvas();
-    this.renderTemplate();
-    this.drawProgram();
-
-    if (this.errors.length > 0) {
-      this.drawErrors();
-    }
-  }
-
-  /**
-   * Draw the complete program visualization
-   */
-  private drawProgram(): void {
-    if (!this.currentProgram) return;
-
-    let y = this.config.spacing.margin;
-
-    // Draw system header
-    y = this.drawSystem(this.currentProgram.system, y);
-
-    const activeAttribute = this.getCurrentAttribute();
-    if (activeAttribute) {
-      this.drawAttribute(activeAttribute, y, this.currentAttributeIndex + 1);
-    }
-  }
-
-  /**
-   * Render the canva-example.html template into the DOM preview
-   */
-  private renderTemplate(): void {
-    if (!this.renderTarget || !this.currentProgram) return;
-
-    const showInfo = /\bshowInfo\b/i.exec(this.currentDSLText) !== null;
-    const systemMatch = /system\s+(\w+)/i.exec(this.currentDSLText);
-    const systemName = systemMatch?.[1] ?? this.currentProgram.system.name;
-    const currentDate = new Date().toLocaleDateString('es-ES');
-    const attributeCount = this.currentProgram.allAttributes.length;
-    const currentAttribute = this.getCurrentAttribute();
-
-    const attributeMatches = Array.from(this.currentDSLText.matchAll(/attribute\s+(\w+)/g));
-    const attributeName = currentAttribute
-      ? this.escapeHtml(attributeMatches[this.currentAttributeIndex]?.[1] ?? currentAttribute.name)
-      : '';
-    const categoryText = currentAttribute ? this.escapeHtml(currentAttribute.category.toString()) : '';
-
-    const flowHtml = currentAttribute ? this.buildAttributeFlowHtml(currentAttribute) : '';
-    const infoBoxesHtml = currentAttribute
-      ? this.buildInfoBoxHtml(systemName, attributeName, categoryText, currentDate)
-      : '';
-
-    // Always show navigation controls if there are multiple attributes
-    const navigationHtml = attributeCount > 1
-      ? `
-        <div class="slide-controls">
-          <button class="slide-btn prev" onclick="previousSlide()">&lt;</button>
-          <span class="slide-counter"><span class="current">${this.currentAttributeIndex + 1}</span>/<span class="total">${attributeCount}</span></span>
-          <button class="slide-btn next" onclick="nextSlide()">&gt;</button>
-        </div>
-      `
-      : '';
-
-    this.renderTarget.innerHTML = `
-      <div class="diagram-template">
-        <div class="contenedor">
-          ${flowHtml}
-          ${showInfo ? infoBoxesHtml : ''}
-          ${navigationHtml}
-        </div>
-      </div>
-    `;
-  }
-
-  /**
-   * Build the horizontal flow HTML for one attribute.
-   */
-  private buildAttributeFlowHtml(attribute: Attribute): string {
-    const sourceText = this.escapeHtml(attribute.scenario.source.text || '');
-    const stimulusText = this.escapeHtml(attribute.scenario.stimulus.text || '');
-    const environmentText = this.escapeHtml(attribute.scenario.environment.text || '');
-    const responseText = this.escapeHtml(attribute.scenario.response.text || '');
-    const measureText = this.escapeHtml(attribute.scenario.measure.text || '');
-    const artifactText = this.escapeHtml(attribute.artifact.name || '');
-
-    return `
-      <table class="diagram-table">
-        <tr>
-          <td class="component-cell">
-            <div class="component-wrapper">${this.getSourceSvg()}</div>
-          </td>
-          <td class="component-cell">
-            <div class="component-wrapper">${this.getArrowSvg()}</div>
-          </td>
-          <td class="component-cell">
-            <div class="component-wrapper">${this.getArtifactBox(artifactText)}</div>
-          </td>
-          <td class="component-cell">
-            <div class="component-wrapper">${this.getArrowSvg()}</div>
-          </td>
-          <td class="component-cell">
-            <div class="component-wrapper">${this.getMeasureSvg()}</div>
-          </td>
-        </tr>
-        <tr>
-          <td class="text-cell">
-            <div class="texto"><strong>Fuente:</strong><br>${sourceText}</div>
-          </td>
-          <td class="text-cell">
-            <div class="texto"><strong>Estimulo:</strong><br>${stimulusText}</div>
-          </td>
-          <td class="text-cell">
-            <div class="texto"><strong>Entorno:</strong><br>${environmentText}</div>
-          </td>
-          <td class="text-cell">
-            <div class="texto"><strong>Respuesta:</strong><br>${responseText}</div>
-          </td>
-          <td class="text-cell">
-            <div class="texto"><strong>Medidas:</strong><br>${measureText}</div>
-          </td>
-        </tr>
-      </table>
-    `;
-  }
-
-  /**
-   * Build the info box HTML for the current attribute.
-   */
-  private buildInfoBoxHtml(systemName: string, attributeName: string, categoryText: string, currentDate: string): string {
-    return `
-      <div class="artifact-box-container">
-        <div class="artifact-box">
-          <div class="info-row"><strong>Sistema:</strong> ${this.escapeHtml(systemName)}</div>
-          <div class="info-row"><strong>Atributo:</strong> ${attributeName}</div>
-          <div class="info-row"><strong>Categoría:</strong> ${categoryText}</div>
-          <div class="info-row"><strong>Modificado:</strong> ${currentDate}</div>
-        </div>
-      </div>
-    `;
-  }
-
-  private escapeHtml(value: string): string {
-    return value
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
-  }
-
-  private getArrowSvg(): string {
-    return `
-      <svg width="70" height="40" aria-hidden="true" style="flex-shrink: 0;">
-        <line x1="0" y1="20" x2="50" y2="20" stroke="black" stroke-width="2" />
-        <polygon points="50,10 70,20 50,30" fill="black" />
-      </svg>
-    `;
-  }
-
-  private getArtifactSvg(artifactText: string): string {
-    return `
-      <svg width="220" height="120" aria-hidden="true">
-        <rect x="10" y="10" width="200" height="100"
-              fill="white"
-              stroke="black"
-              stroke-width="2"
-              rx="20" ry="20"/>
-        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="14">
-          <tspan font-weight="bold">Artefacto:</tspan><tspan> ${artifactText}</tspan>
-        </text>
-      </svg>
-    `;
-  }
-
-  private getArtifactBox(artifactText: string): string {
-    return `
-      <div class="artifact-artifact-box">
-        <strong>Artefacto:</strong><br/>${artifactText}
-      </div>
-    `;
-  }
-
-  private getSourceSvg(): string {
-    return `
-      <svg xmlns="http://www.w3.org/2000/svg" width="70" height="70" display="block" preserveAspectRatio="xMidYMid meet" viewBox="0 0 1470.5 1524.6" style="flex-shrink: 0;width: 100;">
-        <path fill="#d0d0d0" d="m1126 342.6-21 19-32 24-3 3-2 4-7 2q-5-1-7 3c2 9-27 53-25 67l-1 3-10 7 5 1 9 4 5 1 3 1 1 1h2l1 1 3 1 2 1h1l2 1 11 4 4 1 6 3 1 1 5 2 4 1 2 1h2l3 2h1l1 1h2l3 2h2l2 1 3 1h3l2 1 10 4 3 1h1l3 1 2 1h2v1h1l4 1h2v1c1 0 9 4 8-4 3-9 21-30 28-37 10 4 15 8 24 14l5-5-19-13-25-18c2-4 1-4-2-8-1-2-26-16-30-19l-24-16 1-2c10-4 42-32 47-42-1-21-2-25-24-25" display="inline"/>
-        <path fill="#a7a7a8" d="M1030 468.6c-9.2 0-14.4 4.9-16.2 8.2l-41.2 123.8-45.1 136.8c-1.1 1.2-4.7.1-7.7-1.4l-103.6-74.5c-65.2-47-88.3-66-113.2-80-9-5-34-2-294-2s-287-1-297 1c-11.6 6-36.3-15.3-85 303.6-36 479.3-23 460.2-19.7 470.5.9 2.3 10.1 22.2 59.7 16 49.6-6 62.6-9.4 63.6-16 2.2-13.4 3.3-51.8 3.8-218.5.5-166.8 1-172.3 1.7-177.7q.6-1.4 2-1.1c.7 0 1.7.5 1.9 2.3l47 588.9 432-1 22.5-264L682 826l.3-.4c14.5.4 62.8 24 171.8 71 108.9 47 145.9 65 155.9 63 11-1 31-68 81.5-208.5s71.5-204 74-220.5c0-1.8-.7-3.5-3-5 0 0-113.5-57-132.5-57"/>
-        <path fill="#d0d0d0" d="M9 1357.6h120a60 119 0 0 1-120 0m392-1162a148 183 0 1 0 .1 0z" display="inline"/>
-        <path fill="#fafafa" d="m1181 22.6-6 4c-5-2-6-3-11-2-4 1-4 1-8-2q-14 18-25 39c-12 22-30 40-37 64l-2 3c-18 14-41 58-56 78-23 30-41 63-62 94l-12 21q-5 12 6 19c6 6 78 55 86 57q2-4 7-3 5-1 9-4l2-1 1-4 32-24 21-19c22 0 23 4 24 25-5 10-37 38-47 42l-1 2 24 16c4 3 29 17 30 19 3 4 4 4 2 8l25 18 19 13-5 5q8 10 19 15c13 7 24 17 35 1l6-10c17-31 40-57 57-88 13-24 30-42 42-67l3-3c21-29 45-69 64-99 8-8 19-21 24-30v-19l-24-14-33-20-7-4c-22-18-59-38-84-54-12-7-19-13-29-21q-12-5-22-12c-21-15-46-28-67-43" display="inline"/>
-        <path fill="none" stroke="#49484b" stroke-linecap="round" stroke-linejoin="round" stroke-width="25.1" d="M1172.1 13.9 959.9 332.4 1244.4 511l212.2-318.6Z" display="inline"/>
-        <path fill="#d0d0d0" d="m1126 342.6-21 19-32 24-2.2 2.2-.4.3c-3.2 3-6.4 5.6-9.7 6.1l-4.6 1-.6.4q-.9.8-1.5 2l-1.1 2.2-3.6 13.2c-3 6.6-6.9 14.3-10.5 21.8l2.2 3.9q.5 1 1.3 2c2 2 3.6 3.4 6 4.6 4.4 2.1 9.1 3 13.8 3.8l3 .4q2.4.3 4.7.2 2.5.2 4.8-.6c.7-.3 1.9-1.4 2.3-1.9q.7-.7 1.2-1.5.8-.8 1.4-1.7 1.4-2 2.5-4l.8-1.3.2-.9.2-.2.2-.2q0-.4.2-.7l.2-.3.3-.7q0-.2.3-.5l9.6-3.4 2.4-6.7s3.8-5.9 6.3-15l.3-.5c10-4 42-32 47-42-1-21-2-25-24-25" display="inline"/>
-      </svg>
-    `;
-  }
-
-  private getMeasureSvg(): string {
-    return `
-      <svg xmlns="http://www.w3.org/2000/svg" width="70" height="70" display="block" preserveAspectRatio="xMidYMid meet" viewBox="0 0 1044 1024" style="flex-shrink: 0;">
-        <circle cx="534" cy="514" r="510" display="inline"/>
-        <path fill="#fcfdfc" d="M1019 514a485 485 0 1 0-970 0 485 485 0 0 0 970 0" display="inline"/>
-        <path d="M235 106v11h203l-45 139h-50a472 462 0 0 0-168-94l-18 15a451 442 0 0 1 153 772l17 11a472 462 0 0 0 133-548h565v-12H613l33-138h42l27 46 27-46h76l21 63 13-7-16-56h132v-6H834l-38-134-73 134h-9l-63-109-25 109h-60l-7-14-9 14h-46l-59-139h392v-11zm205 59 41 91h-67zm351 14 25 77h-71zm-133 32 26 45h-37zm-468 21c-3 8-7 21-19 22h-12v18h31v82h23V232zm159 30h42l-10 32a472 462 0 0 0-32-32m63 0h72l37 83 36-50 55 105H454a472 462 0 0 0-57-87zm95 0h40l-23 39zm62 0h56l-17 77zm148 0h2l-1 2zm-385 82c-41 0-44 40-41 41h19c-1-8 1-25 21-24 26-1 22 24 21 25-7 33-67 52-63 82h84v-21h-46c19-16 44-39 46-61 0-22-10-41-41-42m-73 17c-14 1-62 27-63 29-1 5 14 3 23 6L41 582l3 6 182-188c9 11 4 26 8 28 5 0 35-64 27-67zm379 119-128 50 128 50v-42h192v-16H638zm-242 67c-42-1-43 40-40 41h17c-1-7 1-23 23-22 24 0 24 16 16 27-7 10-28 8-28 8v16c45-6 38 42 12 40-22-2-23-26-23-27h-17c-2 12 4 45 40 45 34 5 66-53 20-66 29-10 28-60-20-62m-84 5L40 615l5 21 271-83zm500 48v42H620v16h192v42l128-50zM350 733c-14 1-45 53-52 78v17h48v26h23v-26h13v-17h-13v-78zm-7 27c5 0 3 42 2 51h-28a151 151 0 0 1 26-51m223 5v155h17V765zm218 0v155h20V765zm-297 1v154h20V766zm150 0v154h22V766zm74 0v154h22V766zm107 68v81h16v-81zm-287 1v85h11v-85zm146 0v82h12v-82zm72 0v81h13v-81zm-144 1v81h11v-81z"/>
-      </svg>
-    `;
-  }
-
-  /**
-   * Draw system visualization
-   * @param system The system to draw
-   * @param y Starting y position
-   * @returns Next y position
-   */
-  private drawSystem(system: System, y: number): number {
-    const ctx = this.ctx;
-    const config = this.config;
-
-    // System container
-    ctx.fillStyle = config.colors.system;
-    ctx.fillRect(
-      config.spacing.margin,
-      y,
-      this.canvas.width - config.spacing.margin * 2,
-      60
-    );
-
-    // System name
-    ctx.fillStyle = config.colors.text;
-    ctx.font = config.fonts.title;
-    ctx.fillText(
-      `System: ${system.name}`,
-      config.spacing.margin + 20,
-      y + 35
-    );
-
-    // Attribute count
-    ctx.font = config.fonts.small;
-    ctx.fillText(
-      `${system.attributes.length} attributes`,
-      this.canvas.width - config.spacing.margin - 100,
-      y + 35
-    );
-
-    return y + 60 + config.spacing.gap;
-  }
-
-  /**
-   * Draw attribute visualization matching canva-example.html design
-   * @param attribute The attribute to draw
-   * @param y Starting y position
-   * @param index Attribute index
-   * @returns Next y position
-   */
-  private drawAttribute(attribute: Attribute, y: number, index: number): number {
-    const ctx = this.ctx;
-    const config = this.config;
-    const startX = config.spacing.margin;
-    
-    // Attribute header
-    ctx.fillStyle = config.colors.attribute;
-    ctx.fillRect(startX, y, this.canvas.width - config.spacing.margin * 2, 40);
-
-    ctx.fillStyle = config.colors.text;
-    ctx.font = config.fonts.label;
-    ctx.fillText(
-      `${index}. ${attribute.name}`,
-      startX + 15,
-      y + 25
-    );
-
-    // Category badge
-    const categoryText = attribute.category.toString();
-    const categoryWidth = ctx.measureText(categoryText).width + 20;
-    ctx.fillStyle = config.colors.category;
-    ctx.fillRect(
-      this.canvas.width - config.spacing.margin - categoryWidth - 15,
-      y + 10,
-      categoryWidth,
-      20
-    );
-    ctx.fillStyle = config.colors.text;
-    ctx.font = config.fonts.small;
-    ctx.fillText(
-      categoryText,
-      this.canvas.width - config.spacing.margin - categoryWidth - 10,
-      y + 25
-    );
-
-    y += 60; // Space for header
-
-    // Draw the horizontal flow layout like canva-example.html
-    const elementWidth = 150;
-    const arrowWidth = 100;
-    const gap = 20;
-    const totalWidth = (elementWidth * 3) + (arrowWidth * 2) + (gap * 4);
-    const startX2 = (this.canvas.width - totalWidth) / 2;
-
-    // Element 1: Source (person icon placeholder)
-    this.drawIconElement(startX2, y, elementWidth, attribute.scenario.source.text, 'Fuente:', '#d0d0d0');
-
-    // Arrow 1
-    this.drawArrow(startX2 + elementWidth + gap, y + 50, arrowWidth);
-
-    // Element 2: Artifact (rectangle with rounded corners)
-    this.drawArtifactElement(startX2 + elementWidth + gap + arrowWidth + gap, y, elementWidth, attribute.artifact.name, attribute.scenario.environment.text);
-
-    // Arrow 2
-    this.drawArrow(startX2 + elementWidth + gap + arrowWidth + gap + elementWidth + gap, y + 50, arrowWidth);
-
-    // Element 3: Measure (chart icon placeholder)
-    this.drawIconElement(startX2 + elementWidth + gap + arrowWidth + gap + elementWidth + gap + arrowWidth + gap, y, elementWidth, attribute.scenario.measure.text, 'Medidas:', '#fcfdfc');
-
-    y += 150; // Space for the attribute visualization
-
-    return y;
-  }
-
-  /**
-   * Draw an icon element (like the person or chart icons)
-   */
-  private drawIconElement(x: number, y: number, width: number, text: string, label: string, bgColor: string): void {
-    const ctx = this.ctx;
-    const iconHeight = 100;
-
-    // Draw icon placeholder (circle)
-    ctx.fillStyle = bgColor;
-    ctx.beginPath();
-    ctx.arc(x + width / 2, y + iconHeight / 2, 40, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#49484b';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Draw label below
-    ctx.fillStyle = '#000';
-    ctx.font = '12px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(label, x + width / 2, y + iconHeight + 20);
-    ctx.fillText(text, x + width / 2, y + iconHeight + 35);
-    ctx.textAlign = 'left';
-  }
-
-  /**
-   * Draw an artifact element (rectangle with rounded corners)
-   */
-  private drawArtifactElement(x: number, y: number, width: number, artifactName: string, environmentText: string): void {
-    const ctx = this.ctx;
-    const rectHeight = 120;
-
-    // Draw rectangle with rounded corners
-    ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
-    this.roundRect(ctx, x + 10, y, width - 20, rectHeight, 20);
-    ctx.fill();
-    ctx.stroke();
-
-    // Draw artifact text inside rectangle
-    ctx.fillStyle = '#000';
-    ctx.font = '12px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(`Artefacto: ${artifactName}`, x + width / 2, y + rectHeight / 2);
-    ctx.textAlign = 'left';
-
-    // Draw environment label below
-    ctx.fillStyle = '#000';
-    ctx.font = '12px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('Entorno:', x + width / 2, y + rectHeight + 20);
-    ctx.fillText(environmentText, x + width / 2, y + rectHeight + 35);
-    ctx.textAlign = 'left';
-  }
-
-  /**
-   * Draw an arrow
-   */
-  private drawArrow(x: number, y: number, width: number): void {
-    const ctx = this.ctx;
-
-    // Draw line
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + width, y);
-    ctx.stroke();
-
-    // Draw arrowhead
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.moveTo(x + width, y - 10);
-    ctx.lineTo(x + width + 20, y);
-    ctx.lineTo(x + width, y + 10);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  /**
-   * Draw a rounded rectangle
-   */
-  private roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number): void {
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + width - radius, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-    ctx.lineTo(x + width, y + height - radius);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-    ctx.lineTo(x + radius, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
-    ctx.closePath();
-  }
-
-  /**
-   * Draw error message
-   * @param message The error message to display
-   */
-  private drawError(message: string): void {
-    const ctx = this.ctx;
-    const config = this.config;
-
-    ctx.fillStyle = config.colors.error;
-    ctx.font = config.fonts.label;
-
-    const lines = this.wrapText(`Error: ${message}`, this.canvas.width - 40);
-    lines.forEach((line, i) => {
-      ctx.fillText(line, 20, 50 + i * 20);
-    });
-  }
-
-  /**
-   * Draw validation errors
-   */
-  private drawErrors(): void {
-    const ctx = this.ctx;
-    const config = this.config;
-
-    const y = this.canvas.height - 100;
-
-    ctx.fillStyle = config.colors.error;
-    ctx.font = config.fonts.small;
-    ctx.fillText(`Validation Errors (${this.errors.length}):`, 20, y);
-
-    this.errors.slice(0, 3).forEach((error, i) => {
-      ctx.fillText(`• ${error.message}`, 20, y + 20 + i * 15);
-    });
-
-    if (this.errors.length > 3) {
-      ctx.fillText(`... and ${this.errors.length - 3} more`, 20, y + 65);
-    }
-  }
-
-  /**
-   * Wrap text to fit within maximum width
-   * @param text The text to wrap
-   * @param maxWidth Maximum width for each line
-   * @returns Array of wrapped lines
-   */
-  private wrapText(text: string, maxWidth: number): string[] {
-    const words = text.split(' ');
-    const lines: string[] = [];
-    let currentLine = '';
-
-    words.forEach(word => {
-      const testLine = currentLine + (currentLine ? ' ' : '') + word;
-      const metrics = this.ctx.measureText(testLine);
-
-      if (metrics.width > maxWidth && currentLine) {
-        lines.push(currentLine);
-        currentLine = word;
-      } else {
-        currentLine = testLine;
+    // Attempt to hide any DOM elements that may represent navigation controls
+    try {
+      if (this.svgContainer) {
+        const controls = this.svgContainer.querySelectorAll('.navigation-controls, .nav-controls, .nav-buttons');
+        controls.forEach((el) => {
+          (el as HTMLElement).style.display = 'none';
+        });
       }
-    });
-
-    if (currentLine) {
-      lines.push(currentLine);
+    } catch {
+      // swallow DOM errors to preserve compatibility
     }
 
-    return lines;
+    return prev;
   }
 
   /**
-   * Export the current DOM visualization as a high-resolution PNG.
-   *
-   * Flow:
-   *   exportSVG() → base64 data URL → Image → Canvas → PNG data URL
-   *
-   * A base64 data URL is used (instead of a Blob URL) because browsers mark
-   * a canvas as "tainted" when an SVG with <foreignObject> is drawn from a
-   * Blob URL, which blocks toDataURL().
-   *
-   * NOTE: this method is async. Call it with await.
+   * Restore navigation buttons visibility from previous state (compat shim).
+   */
+  showNavigationButtons(previousState: boolean): void {
+    this.navigationButtonsVisible = !!previousState;
+
+    try {
+      if (this.svgContainer) {
+        const controls = this.svgContainer.querySelectorAll('.navigation-controls, .nav-controls, .nav-buttons');
+        controls.forEach((el) => {
+          (el as HTMLElement).style.display = this.navigationButtonsVisible ? '' : 'none';
+        });
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  /**
+   * Clear the rendered SVG and cached export data.
+   */
+  clearCanvas(): void {
+    this.lastSvgString = '';
+
+    if (this.svgContainer) {
+      this.svgContainer.innerHTML = '';
+    }
+  }
+
+  /**
+   * Export the current visualization as a high-resolution PNG
+   * Converts SVG to canvas and exports as PNG
    * @returns Promise<string> PNG data URL
    */
   async exportPNG(): Promise<string> {
-    const svgString = this.exportSVG();
-
-    // Get the complete template size for PNG export
-    const diagramTemplate = this.renderTarget?.querySelector('.diagram-template') as HTMLElement;
-    if (!diagramTemplate) {
-      return this.canvas.toDataURL('image/png');
+    if (!this.lastSvgString) {
+      return '';
     }
-    
-    // Apply transform: translate(0, 0) to reset positioning
-    const originalTransform = diagramTemplate.style.transform;
-    diagramTemplate.style.transform = 'translate(0, 0)';
-    // Force reflow by accessing offsetHeight
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    diagramTemplate.offsetHeight;
-    
-    const rect = diagramTemplate.getBoundingClientRect();
-    const scale  = 2;
-    const width = Math.max(400, rect.width) * scale;
-    const height = Math.max(300, rect.height) * scale;
-    
-    // Restore original transform
-    diagramTemplate.style.transform = originalTransform;
 
-    // Encode SVG as a base64 data URL to avoid canvas tainting.
-    // Use global btoa function (browser API)
-    const encoded = globalThis.btoa(encodeURIComponent(svgString).replaceAll(/%([0-9A-F]{2})/g, (_, p1) => String.fromCodePoint(Number.parseInt(p1, 16))));
+    const svgString = this.lastSvgString;
+    const scale = 2;
+    const width = 1200 * scale;
+    const height = 900 * scale;
+
+    // Encode SVG as base64
+    const encoded = globalThis.btoa(
+      encodeURIComponent(svgString).replace(/%([0-9A-F]{2})/g, (_, p1) =>
+        String.fromCodePoint(Number.parseInt(p1, 16))
+      )
+    );
     const dataUrl = `data:image/svg+xml;base64,${encoded}`;
 
     return new Promise<string>((resolve) => {
       const img = new globalThis.Image();
 
       img.onload = (): void => {
-        const exportCanvas = document.createElement('canvas');
-        exportCanvas.width  = width;
-        exportCanvas.height = height;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
 
-        const ctx = exportCanvas.getContext('2d');
+        const ctx = canvas.getContext('2d');
         if (!ctx) {
-          resolve(this.canvas.toDataURL('image/png'));
+          resolve('');
           return;
         }
 
@@ -784,12 +334,11 @@ export class DSLVisualizer {
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
 
-        resolve(exportCanvas.toDataURL('image/png'));
+        resolve(canvas.toDataURL('image/png'));
       };
 
       img.onerror = (): void => {
-        // Fallback to the raw canvas if the SVG cannot be rendered.
-        resolve(this.canvas.toDataURL('image/png'));
+        resolve('');
       };
 
       img.src = dataUrl;
@@ -797,109 +346,88 @@ export class DSLVisualizer {
   }
 
   /**
-   * Export the current DOM visualization as SVG using XMLSerializer + foreignObject.
-   *
-   * XMLSerializer serializes the *live* DOM, so every element is already
-   * well-formed XML (void elements like <br> become <br/> automatically).
-   * Computed styles are inlined on a clone so the result is self-contained.
-   *
-   * @returns A well-formed SVG string, or a simple fallback SVG on error.
+   * Export the current visualization as pure SVG (no foreignObject)
+   * Returns a valid, self-contained SVG string
+   * @returns SVG string
    */
   exportSVG(): string {
-    if (!this.renderTarget) {
-      return this.generateSimpleSVG();
-    }
-
-    const diagramTemplate = this.renderTarget.querySelector<HTMLElement>('.diagram-template');
-    if (!diagramTemplate) {
-      return this.generateSimpleSVG();
-    }
-
-    // Get bounds at export time
-    const rect = diagramTemplate.getBoundingClientRect();
-    
-    // Use the complete template size for export
-    const width = Math.max(400, rect.width);
-    const height = Math.max(300, rect.height);
-
-    // 1. Clone and inline computed styles so the SVG is self-contained.
-    const clone = diagramTemplate.cloneNode(true) as HTMLElement;
-    
-    // No need to restore transform - centering is permanent
-    
-    // 2. Remove navigation buttons from the clone to ensure they don't appear in SVG
-    const navigationElements = clone.querySelectorAll('.slide-controls, .slide-btn, .slide-counter');
-    navigationElements.forEach(element => {
-      element.remove();
-    });
-    
-    // Also remove any buttons within the diagram template clone
-    const allButtons = clone.querySelectorAll('button');
-    allButtons.forEach(button => {
-      button.remove();
-    });
-    
-    this.inlineComputedStyles(diagramTemplate, clone);
-
-    // 2. Build the foreignObject wrapper as a real DOM tree so XMLSerializer
-    //    produces valid XML (void elements are serialized correctly).
-    const svgNS  = 'http://www.w3.org/2000/svg';
-    const xhtmlNS = 'http://www.w3.org/1999/xhtml';
-
-    const svg = document.createElementNS(svgNS, 'svg');
-    svg.setAttribute('xmlns', svgNS);
-    svg.setAttribute('xmlns:xhtml', xhtmlNS);
-    svg.setAttribute('width',   String(width));
-    svg.setAttribute('height',  String(height));
-    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-
-    const bg = document.createElementNS(svgNS, 'rect');
-    bg.setAttribute('width',  '100%');
-    bg.setAttribute('height', '100%');
-    bg.setAttribute('fill',   '#ffffff');
-    svg.appendChild(bg);
-
-    const fo = document.createElementNS(svgNS, 'foreignObject');
-    fo.setAttribute('x',      '0');
-    fo.setAttribute('y',      '0');
-    fo.setAttribute('width',  String(width));
-    fo.setAttribute('height', String(height));
-    svg.appendChild(fo);
-
-    // The immediate child of foreignObject must be in the XHTML namespace.
-    const wrapper = document.createElementNS(xhtmlNS, 'div');
-    wrapper.setAttribute(
-      'style',
-      `width:${width}px;height:${height}px;overflow:hidden;background:#ffffff;`
-    );
-    wrapper.appendChild(clone);
-    fo.appendChild(wrapper);
-
-    // 3. Serialize to string  XMLSerializer guarantees well-formed XML.
-    return new XMLSerializer().serializeToString(svg);
+    return this.lastSvgString || '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900"></svg>';
   }
 
   /**
-   * Recursively copy computed styles from a live element tree into a cloned
-   * element tree so the clone is visually self-contained.
+   * Export the current visualization as PDF
+   * Requires: jspdf and svg2pdf.js libraries (optional dependency)
+   * @returns Promise<void>
    */
-  private inlineComputedStyles(source: HTMLElement, target: HTMLElement): void {
-    const computed = globalThis.window === undefined ? source.style : globalThis.window.getComputedStyle(source);
-    for (const prop of computed) {
+  async exportPDF(): Promise<void> {
+    try {
+      // Dynamic imports for optional PDF dependencies
+      const { jsPDF } = await import('jspdf');
+
+      if (!this.lastSvgString) {
+        throw new Error('No visualization to export');
+      }
+
+      // Create SVG element from string
+      const parser = new DOMParser();
+      const svgDoc = parser.parseFromString(this.lastSvgString, 'image/svg+xml');
+      const svgElement = svgDoc.documentElement as unknown as SVGSVGElement;
+      const { width, height } = this.getSvgPdfSize(svgElement);
+
+      // Create PDF
+      const pdf = new jsPDF({
+        orientation: width >= height ? 'landscape' : 'portrait',
+        unit: 'pt',
+        format: [width, height],
+        compress: true
+      });
+
+      // Try to import svg2pdf for advanced PDF conversion
       try {
-        (target.style as CSSStyleDeclaration & Record<string, string>)[prop] = computed.getPropertyValue(prop);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const svg2pdfModule: any = await import('svg2pdf.js');
+        
+        // Convert SVG to PDF
+        await svg2pdfModule.default(svgElement, pdf, {
+          xOffset: 0,
+          yOffset: 0,
+          scale: 1,
+          width,
+          height
+        });
       } catch {
-        // Some properties are read-only; skip silently.
+        // If svg2pdf is not available, throw error
+        throw new Error('svg2pdf.js not found. Install with: npm install svg2pdf.js');
+      }
+
+      // Save PDF
+      pdf.save('diagram.pdf');
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('PDF export error:', error);
+      throw new Error('Failed to export PDF. Ensure jspdf and svg2pdf.js are installed.');
+    }
+  }
+
+  private getSvgPdfSize(svgElement: SVGSVGElement): { width: number; height: number } {
+    const viewBox = svgElement.getAttribute('viewBox')?.trim();
+    if (viewBox) {
+      const parts = viewBox.split(/\s+/).map(Number);
+      const width = parts[2] ?? Number.NaN;
+      const height = parts[3] ?? Number.NaN;
+
+      if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+        return { width, height };
       }
     }
 
-    const srcChildren = Array.from(source.children) as HTMLElement[];
-    const tgtChildren = Array.from(target.children) as HTMLElement[];
-    srcChildren.forEach((child, i) => {
-      if (tgtChildren[i]) {
-        this.inlineComputedStyles(child, tgtChildren[i]);
-      }
-    });
+    const width = Number.parseFloat(svgElement.getAttribute('width') ?? '');
+    const height = Number.parseFloat(svgElement.getAttribute('height') ?? '');
+
+    return {
+      width: Number.isFinite(width) && width > 0 ? width : 706.56,
+      height: Number.isFinite(height) && height > 0 ? height : 310.72
+    };
   }
 
   /**
@@ -916,25 +444,7 @@ export class DSLVisualizer {
   }
 
   /**
-   * Generate simple fallback SVG
-   */
-  private generateSimpleSVG(): string {
-    const width = 1200;
-    const height = 800;
-    return `
-      <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-        <rect width="100%" height="100%" fill="#ffffff" />
-        <text x="50%" y="50%" text-anchor="middle" font-size="16" font-family="Arial" fill="#666">
-          Diagram Export
-        </text>
-      </svg>
-    `.trim();
-  }
-
-  /**
    * Validate DSL program using DSLParser errors
-   * @param program The program to validate
-   * @returns Validation result
    */
   private validateProgram(): ValidationResult {
     const parseResult = DSLParser.parseDSL(this.currentDSLText || '');
@@ -947,159 +457,106 @@ export class DSLVisualizer {
 
   /**
    * Update visual configuration
-   * @param newConfig New configuration to merge
    */
   updateConfig(newConfig: Partial<VisualConfig>): void {
-    this.config = {
-      ...this.config,
-      ...newConfig,
-      colors: { ...this.config.colors, ...newConfig.colors },
-      fonts: { ...this.config.fonts, ...newConfig.fonts },
-      spacing: { ...this.config.spacing, ...newConfig.spacing }
-    };
+    if (newConfig) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      this.svgRenderer.setConfig(newConfig as any);
+    }
   }
 
   /**
-   * Get current configuration
-   * @returns Current visual configuration
+   * Get the current attribute
    */
-  getConfig(): VisualConfig {
-    return { ...this.config };
+  private getCurrentAttribute(): Attribute | null {
+    if (!this.currentProgram || this.currentProgram.allAttributes.length === 0) return null;
+    return this.currentProgram.allAttributes[this.currentAttributeIndex] ?? null;
   }
 
-  /**
-   * Get canvas dimensions
-   * @returns Canvas width and height
-   */
-  getDimensions(): { width: number; height: number } {
-    return {
-      width: this.canvas.width,
-      height: this.canvas.height
-    };
-  }
-  
-  /**
-   * Get the actual content bounds of the diagram including info box
-   * @param diagramTemplate The diagram template element
-   * @returns Combined content bounds or null if not found
-   */
-  private getContentBounds(diagramTemplate: HTMLElement): DOMRect | null {
-    // Find the main content container
-    const contenedor = diagramTemplate.querySelector('.contenedor') as HTMLElement;
-    if (!contenedor) return null;
-    
-    let bounds: DOMRect | null = null;
-    
-    // Get the diagram table which contains the actual flow
-    const diagramTable = contenedor.querySelector('.diagram-table') as HTMLElement;
-    if (diagramTable) {
-      bounds = diagramTable.getBoundingClientRect();
-    } else {
-      // Fallback to the contenedor
-      bounds = contenedor.getBoundingClientRect();
+  private getShowInfoForAttribute(attribute: Attribute): boolean {
+    if (typeof attribute.showInfo === 'boolean') {
+      return attribute.showInfo;
     }
-    
-    // Include the artifact box (info box) if it exists
-    const artifactBox = contenedor.querySelector('.artifact-box-container') as HTMLElement;
-    if (artifactBox && bounds) {
-      const artifactBounds = artifactBox.getBoundingClientRect();
-      
-      // Create a combined bounds that includes both the table and info box
-      const combinedLeft = Math.min(bounds.left, artifactBounds.left);
-      const combinedTop = Math.min(bounds.top, artifactBounds.top);
-      const combinedRight = Math.max(bounds.right, artifactBounds.right);
-      const combinedBottom = Math.max(bounds.bottom, artifactBounds.bottom);
-      
-      // Create a new DOMRect with combined bounds
-      return new DOMRect(
-        combinedLeft,
-        combinedTop,
-        combinedRight - combinedLeft,
-        combinedBottom - combinedTop
-      );
-    }
-    
-    return bounds;
-  }
-  
-  /**
-   * Hide navigation buttons for export
-   * @returns Original button state for restoration
-   */
-  hideNavigationButtons(): boolean {
-    let hadButtons = false;
-    
-    if (this.renderTarget) {
-      // Hide all navigation-related elements
-      const navigationElements = this.renderTarget.querySelectorAll('.slide-controls, .slide-btn, .slide-counter');
-      
-      navigationElements.forEach((element) => {
-        if (element instanceof HTMLElement) {
-          hadButtons = true;
-          // Completely hide the element
-          element.style.display = 'none';
-          element.style.visibility = 'hidden';
-          element.style.opacity = '0';
-          element.style.pointerEvents = 'none';
-        }
-      });
-      
-      // Also hide any buttons within the diagram template
-      const allButtons = this.renderTarget.querySelectorAll('.diagram-template button');
-      
-      allButtons.forEach((button) => {
-        if (button instanceof HTMLElement) {
-          hadButtons = true;
-          button.style.display = 'none';
-          button.style.visibility = 'hidden';
-          button.style.opacity = '0';
-          button.style.pointerEvents = 'none';
-        }
-      });
-    }
-    
-    return hadButtons;
+
+    const attributeBlock = this.getAttributeBlock(attribute.name);
+    const match = /\bshowInfo(?:\s*:\s*(true|false))?\b/i.exec(attributeBlock);
+    return match ? match[1]?.toLowerCase() !== 'false' : false;
   }
 
-  /**
-   * Show navigation buttons after export
-   * @param hadButtons Whether buttons were originally visible
-   */
-  showNavigationButtons(hadButtons: boolean): void {
-    if (!hadButtons || !this.renderTarget) return;
-    
-    // Restore all navigation-related elements
-    const navigationElements = this.renderTarget.querySelectorAll('.slide-controls, .slide-btn, .slide-counter');
-    
-    navigationElements.forEach(element => {
-      if (element instanceof HTMLElement) {
-        // Restore all visibility properties
-        element.style.display = '';
-        element.style.visibility = '';
-        element.style.opacity = '';
-        element.style.pointerEvents = '';
-      }
+  private getAttributeBlock(attributeName: string): string {
+    const escapedName = attributeName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = new RegExp(`\\battribute\\s+${escapedName}\\s*\\{([\\s\\S]*?)\\}`, 'i').exec(this.currentDSLText);
+    return match?.[1] ?? '';
+  }
+
+  private renderCanvasControls(): void {
+    if (!this.svgContainer || !this.currentProgram) return;
+
+    const total = this.currentProgram.allAttributes.length;
+    const controls = document.createElement('div');
+    controls.className = 'canvas-controls navigation-controls nav-controls nav-buttons';
+    controls.style.display = this.navigationButtonsVisible ? '' : 'none';
+    controls.addEventListener('mousedown', event => {
+      event.stopPropagation();
     });
-    
-    // Also restore any buttons within the diagram template
-    const allButtons = this.renderTarget.querySelectorAll('.diagram-template button');
-    allButtons.forEach(button => {
-      if (button instanceof HTMLElement) {
-        button.style.display = '';
-        button.style.visibility = '';
-        button.style.opacity = '';
-        button.style.pointerEvents = '';
-      }
+    controls.addEventListener('click', event => {
+      event.stopPropagation();
     });
+
+    if (total > 1) {
+      const prev = this.createControlButton('‹', 'Previous diagram', () => {
+        this.previousAttribute();
+      });
+
+      const counter = document.createElement('span');
+      counter.className = 'diagram-counter';
+      counter.innerHTML = `<span class="current">${this.currentAttributeIndex + 1}</span><span class="separator">/</span>${total}`;
+
+      const next = this.createControlButton('›', 'Next diagram', () => {
+        this.nextAttribute();
+      });
+
+      controls.append(prev, counter, next, this.createDivider());
+    }
+
+    controls.append(
+      this.createControlButton('-', 'Zoom out', () => this.zoomDiagram(0.9)),
+      this.createControlButton('100', 'Reset zoom', () => this.resetDiagramZoom(), 'wide'),
+      this.createControlButton('+', 'Zoom in', () => this.zoomDiagram(1.1))
+    );
+
+    this.svgContainer.appendChild(controls);
   }
 
-  /**
-   * Set canvas dimensions
-   * @param width New canvas width
-   * @param height New canvas height
-   */
-  setDimensions(width: number, height: number): void {
-    this.canvas.width = width;
-    this.canvas.height = height;
+  private createControlButton(
+    label: string,
+    title: string,
+    onClick: () => void,
+    variant?: 'wide'
+  ): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `canvas-control-btn${variant === 'wide' ? ' wide' : ''}`;
+    button.setAttribute('aria-label', title);
+    button.title = title;
+    button.textContent = label;
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  private createDivider(): HTMLSpanElement {
+    const divider = document.createElement('span');
+    divider.className = 'canvas-control-divider';
+    return divider;
+  }
+
+  private zoomDiagram(factor: number): void {
+    const zoom = (globalThis as typeof globalThis & { zoomDiagram?: (factor: number) => void }).zoomDiagram;
+    zoom?.(factor);
+  }
+
+  private resetDiagramZoom(): void {
+    const reset = (globalThis as typeof globalThis & { resetDiagramZoom?: () => void }).resetDiagramZoom;
+    reset?.();
   }
 }

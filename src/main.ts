@@ -312,7 +312,7 @@ function syntaxHighlight(text: string, errors: ValidationError[] = []): string {
   // Step 1: Escape HTML entities FIRST
   let processed = escapeHtml(text);
 
-  const keywords = ['system', 'attribute', 'artifact', 'category', 'source', 'stimulus', 'environment', 'response', 'measure'];
+  const keywords = ['system', 'attribute', 'artifact', 'category', 'source', 'stimulus', 'environment', 'response', 'measure', 'showInfo'];
   const categories = [
     'PerformanceEfficiency.TimeBehaviour',
     'PerformanceEfficiency.ResourceUtilization',
@@ -711,29 +711,76 @@ async function exportSVG(): Promise<void> {
   }
 }
 
-/**
- * Convert SVG to PDF using backend puppeteer service (maintains quality and selectable text)
- */
-async function svgToPdf(svgText: string, fileName: string): Promise<void> {
-  try {
-    const response = await fetch('http://localhost:3001/api/svg-to-pdf', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ svg: svgText })
-    });
+function getSvgPdfSize(svgElement: SVGSVGElement): { width: number; height: number } {
+  const viewBox = svgElement.getAttribute('viewBox')?.trim();
+  if (viewBox) {
+    const parts = viewBox.split(/\s+/).map(Number);
+    const width = parts[2] ?? Number.NaN;
+    const height = parts[3] ?? Number.NaN;
 
-    if (!response.ok) {
-      throw new Error('Failed to convert SVG to PDF');
+    if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+      return { width, height };
     }
-
-    const pdfBlob = await response.blob();
-    triggerDownload(pdfBlob, fileName);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Failed to convert SVG to PDF';
-    throw new Error(errorMessage);
   }
+
+  const width = Number.parseFloat(svgElement.getAttribute('width') ?? '');
+  const height = Number.parseFloat(svgElement.getAttribute('height') ?? '');
+
+  return {
+    width: Number.isFinite(width) && width > 0 ? width : 706.56,
+    height: Number.isFinite(height) && height > 0 ? height : 310.72
+  };
+}
+
+/**
+ * Convert pure SVG directly to selectable PDF in the browser.
+ */
+async function svgToPdfBlob(svgText: string): Promise<Blob> {
+  const { jsPDF } = await import('jspdf');
+  const svg2pdfModule = await import('svg2pdf.js');
+  const svg2pdf =
+    svg2pdfModule.default ??
+    (svg2pdfModule as unknown as { svg2pdf?: unknown }).svg2pdf as unknown;
+
+  if (typeof svg2pdf !== 'function') {
+    throw new Error('svg2pdf.js export not found');
+  }
+
+  const parser = new DOMParser();
+  const svgDoc = parser.parseFromString(svgText, 'image/svg+xml');
+  const parserError = svgDoc.querySelector('parsererror');
+
+  if (parserError) {
+    throw new Error('Invalid SVG');
+  }
+
+  const svgElement = svgDoc.documentElement as unknown as SVGSVGElement;
+  const { width, height } = getSvgPdfSize(svgElement);
+  const pdf = new jsPDF({
+    orientation: width >= height ? 'landscape' : 'portrait',
+    unit: 'pt',
+    format: [width, height],
+    compress: true
+  });
+
+  await (svg2pdf as (
+    svg: SVGSVGElement,
+    pdf: InstanceType<typeof jsPDF>,
+    options: Record<string, unknown>
+  ) => Promise<void>)(svgElement, pdf, {
+    xOffset: 0,
+    yOffset: 0,
+    scale: 1,
+    width,
+    height
+  });
+
+  return pdf.output('blob');
+}
+
+async function svgToPdf(svgText: string, fileName: string): Promise<void> {
+  const pdfBlob = await svgToPdfBlob(svgText);
+  triggerDownload(pdfBlob, fileName);
 }
 
 /**
@@ -764,20 +811,8 @@ async function exportPDF(): Promise<void> {
         const attributeName = sanitizeFileName(attribute?.name ?? `attribute_${index + 1}`);
         const svgText = visualizer.exportSVG();
         
-        // Convert SVG to PDF using backend service
-        const response = await fetch('http://localhost:3001/api/svg-to-pdf', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ svg: svgText })
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to convert SVG to PDF');
-        }
-
-        const pdfBytes = await response.arrayBuffer();
+        const pdfBlob = await svgToPdfBlob(svgText);
+        const pdfBytes = await pdfBlob.arrayBuffer();
         
         zip.file(`${systemName}_${attributeName}.pdf`, pdfBytes);
       }

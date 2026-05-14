@@ -28,6 +28,7 @@ export interface Attribute {
   artifact: Artifact;
   category: QualityCategory;
   scenario: Scenario;
+  showInfo?: boolean;
 }
 
 /**
@@ -218,6 +219,8 @@ export type TokenType =
   | 'KEYWORD_ENVIRONMENT'
   | 'KEYWORD_RESPONSE'
   | 'KEYWORD_MEASURE'
+  | 'KEYWORD_SHOW_INFO'
+  | 'BOOLEAN'
   | 'IDENTIFIER'
   | 'STRING'
   | 'NUMBER'
@@ -252,6 +255,8 @@ export type ASTNodeType =
   | 'EnvironmentDeclaration'
   | 'ResponseDeclaration'
   | 'MeasureDeclaration'
+  | 'ShowInfoDeclaration'
   | 'Identifier'
+  | 'BooleanLiteral'
   | 'StringLiteral'
   | 'CategoryLiteral';
