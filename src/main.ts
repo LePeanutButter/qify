@@ -7,7 +7,6 @@ import { DSLParser } from './core/domain/dsl/services/DSLParser';
 import type { ValidationError } from './core/domain/dsl/types/DSL.types';
 import { DSLVisualizer } from './core/domain/visualization/services/Visualizer';
 import JSZip from 'jszip';
-import { jsPDF } from 'jspdf';
 
 // Global instances
 let visualizer: DSLVisualizer;
@@ -713,64 +712,28 @@ async function exportSVG(): Promise<void> {
 }
 
 /**
- * Convert SVG to PNG using canvas (handles foreignObject via browser rendering)
- */
-async function svgToPng(svgText: string, width: number, height: number): Promise<string> {
-  // Encode SVG to base64 to avoid CORS issues
-  const svgBase64 = btoa(unescape(encodeURIComponent(svgText)));
-  const svgDataUrl = `data:image/svg+xml;base64,${svgBase64}`;
-
-  // Create a canvas element
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    throw new Error('Failed to get canvas context');
-  }
-
-  // Create an image to load the SVG
-  const img = new Image();
-  
-  await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve();
-    img.onerror = () => reject(new Error('Failed to load SVG'));
-    img.src = svgDataUrl;
-  });
-
-  // Draw the SVG image to the canvas (browser renders foreignObject)
-  ctx.drawImage(img, 0, 0, width, height);
-  
-  // Get PNG data URL from canvas
-  return canvas.toDataURL('image/png');
-}
-
-/**
- * Convert SVG to PDF using canvas rendering (handles foreignObject)
+ * Convert SVG to PDF using backend puppeteer service (maintains quality and selectable text)
  */
 async function svgToPdf(svgText: string, fileName: string): Promise<void> {
-  // Extract width and height from SVG
-  const widthMatch = svgText.match(/width="([\d.]+)(px)?"/);
-  const heightMatch = svgText.match(/height="([\d.]+)(px)?"/);
+  try {
+    const response = await fetch('http://localhost:3001/api/svg-to-pdf', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ svg: svgText })
+    });
 
-  const width = widthMatch && widthMatch[1] ? parseFloat(widthMatch[1]) : 1000;
-  const height = heightMatch && heightMatch[1] ? parseFloat(heightMatch[1]) : 1000;
+    if (!response.ok) {
+      throw new Error('Failed to convert SVG to PDF');
+    }
 
-  // Convert SVG to PNG using canvas (handles foreignObject via browser)
-  const pngDataUrl = await svgToPng(svgText, width, height);
-
-  // Create PDF with dimensions matching the SVG
-  const pdf = new jsPDF({
-    orientation: width > height ? 'landscape' : 'portrait',
-    unit: 'px',
-    format: [width, height]
-  });
-
-  // Add the PNG image to the PDF
-  pdf.addImage(pngDataUrl, 'PNG', 0, 0, width, height);
-  
-  // Save the PDF
-  pdf.save(fileName);
+    const pdfBlob = await response.blob();
+    triggerDownload(pdfBlob, fileName);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to convert SVG to PDF';
+    throw new Error(errorMessage);
+  }
 }
 
 /**
@@ -801,23 +764,20 @@ async function exportPDF(): Promise<void> {
         const attributeName = sanitizeFileName(attribute?.name ?? `attribute_${index + 1}`);
         const svgText = visualizer.exportSVG();
         
-        // Convert SVG to PDF and add to zip
-        const widthMatch = svgText.match(/width="([\d.]+)(px)?"/);
-        const heightMatch = svgText.match(/height="([\d.]+)(px)?"/);
-        const width = widthMatch && widthMatch[1] ? parseFloat(widthMatch[1]) : 1000;
-        const height = heightMatch && heightMatch[1] ? parseFloat(heightMatch[1]) : 1000;
-
-        // Convert SVG to PNG using canvas (handles foreignObject via browser)
-        const pngDataUrl = await svgToPng(svgText, width, height);
-
-        const pdf = new jsPDF({
-          orientation: width > height ? 'landscape' : 'portrait',
-          unit: 'px',
-          format: [width, height]
+        // Convert SVG to PDF using backend service
+        const response = await fetch('http://localhost:3001/api/svg-to-pdf', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ svg: svgText })
         });
 
-        pdf.addImage(pngDataUrl, 'PNG', 0, 0, width, height);
-        const pdfBytes = pdf.output('arraybuffer');
+        if (!response.ok) {
+          throw new Error('Failed to convert SVG to PDF');
+        }
+
+        const pdfBytes = await response.arrayBuffer();
         
         zip.file(`${systemName}_${attributeName}.pdf`, pdfBytes);
       }
