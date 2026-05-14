@@ -277,7 +277,7 @@ export class DSLVisualizer {
   private renderTemplate(): void {
     if (!this.renderTarget || !this.currentProgram) return;
 
-    const hideInfo = /\bhideInfo\b/i.exec(this.currentDSLText) !== null;
+    const showInfo = /\bshowInfo\b/i.exec(this.currentDSLText) !== null;
     const systemMatch = /system\s+(\w+)/i.exec(this.currentDSLText);
     const systemName = systemMatch?.[1] ?? this.currentProgram.system.name;
     const currentDate = new Date().toLocaleDateString('es-ES');
@@ -310,7 +310,7 @@ export class DSLVisualizer {
       <div class="diagram-template">
         <div class="contenedor">
           ${flowHtml}
-          ${hideInfo ? '' : infoBoxesHtml}
+          ${showInfo ? infoBoxesHtml : ''}
           ${navigationHtml}
         </div>
       </div>
