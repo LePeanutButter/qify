@@ -14,6 +14,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   flex: 1;
+  min-height: 0;
 }
 
 .editor {
@@ -182,11 +183,12 @@ button:disabled {
 
 .preview {
   padding: 20px;
-  overflow: auto;
+  overflow: hidden;
   background: #0c0e12;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  display: grid;
+  grid-template-rows: minmax(240px, calc(50vh - 58px)) minmax(0, 1fr);
+  gap: 26px;
+  min-height: 0;
 }
 
 canvas {
@@ -194,16 +196,100 @@ canvas {
 }
 
 .visualization {
+  box-sizing: border-box;
   background: #ffffff;
   border-radius: 12px;
-  padding: 24px;
+  padding: 18px;
   overflow: hidden;
-  min-height: 320px;
+  height: 100%;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: grab;
   position: relative;
+}
+
+.visualization-pane {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.readme-panel {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid #222936;
+  border-radius: 8px;
+  background: #11151d;
+}
+
+.readme-content {
+  max-width: 760px;
+  padding: 22px 24px 30px;
+  color: #d7dce5;
+  font-size: 13px;
+  line-height: 1.58;
+}
+
+.readme-content h1,
+.readme-content h2 {
+  color: #f8fafc;
+  letter-spacing: 0;
+}
+
+.readme-content h1 {
+  margin: 0 0 4px;
+  font-size: 24px;
+}
+
+.readme-content h2 {
+  margin: 22px 0 8px;
+  font-size: 14px;
+}
+
+.readme-lead {
+  margin: 0 0 18px;
+  color: #9ca3af;
+}
+
+.readme-content p {
+  margin: 0 0 10px;
+}
+
+.readme-content ul {
+  margin: 8px 0 12px;
+  padding-left: 18px;
+}
+
+.readme-content li {
+  margin: 5px 0;
+}
+
+.readme-content code {
+  font-family: "Fira Code", Consolas, monospace;
+  color: #e5e7eb;
+  background: #1a202c;
+  border: 1px solid #293241;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.readme-content pre {
+  margin: 10px 0 14px;
+  padding: 12px;
+  overflow: auto;
+  background: #0c0f15;
+  border: 1px solid #252c3a;
+  border-radius: 6px;
+}
+
+.readme-content pre code {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #dbeafe;
+  white-space: pre;
 }
 
 .visualization:active {

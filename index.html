@@ -65,7 +65,86 @@ attribute PerformanceCheckout {
   </div>
 
   <div class="preview">
-    <div id="visualization" class="visualization"></div>
+    <section class="visualization-pane" aria-label="Visualizador">
+      <div id="visualization" class="visualization"></div>
+    </section>
+    <section class="readme-panel" aria-label="Documentación de uso">
+      <div class="readme-content">
+        <h1>Qify</h1>
+        <p class="readme-lead">DSL visual para documentar atributos de calidad de software basados en ISO 25010.</p>
+
+        <h2>Cómo usar Qify</h2>
+        <p>Escribe o importa un archivo <code>.qify</code> en el editor de la izquierda. La vista superior derecha se actualiza automáticamente y muestra un diagrama SVG exportable por cada atributo definido.</p>
+
+        <h2>Estructura básica</h2>
+        <pre><code>system Ecommerce
+
+attribute PerformanceCheckout {
+  artifact: "CheckoutService",
+  category: PerformanceEfficiency.TimeBehaviour,
+
+  source: "external user",
+  stimulus: "1000 concurrent users",
+  environment: "peak hours",
+  response: "response time &lt; 2s",
+  measure: "latency percentile p95"
+}</code></pre>
+
+        <h2>Campos del DSL</h2>
+        <ul>
+          <li><strong>system</strong>: nombre del sistema evaluado.</li>
+          <li><strong>attribute</strong>: nombre del atributo o requisito de calidad.</li>
+          <li><strong>artifact</strong>: componente, servicio o módulo afectado.</li>
+          <li><strong>category</strong>: categoría ISO 25010 usada para clasificar el atributo.</li>
+          <li><strong>source</strong>: origen del estímulo, como usuario, sistema externo o monitor.</li>
+          <li><strong>stimulus</strong>: evento o condición que dispara la respuesta.</li>
+          <li><strong>environment</strong>: contexto donde ocurre el estímulo.</li>
+          <li><strong>response</strong>: comportamiento esperado del sistema.</li>
+          <li><strong>measure</strong>: métrica verificable para validar el resultado.</li>
+        </ul>
+
+        <h2>Caja de información</h2>
+        <p>La caja inferior del diagrama es opcional. Para mostrar sistema, atributo, categoría y fecha de modificación, agrega <code>showInfo</code> dentro del bloque <code>attribute</code>.</p>
+        <pre><code>attribute PerformanceCheckout {
+  artifact: "CheckoutService",
+  category: PerformanceEfficiency.TimeBehaviour,
+  showInfo,
+
+  source: "external user",
+  stimulus: "1000 concurrent users",
+  environment: "peak hours",
+  response: "response time &lt; 2s",
+  measure: "latency percentile p95"
+}</code></pre>
+        <p>También puedes usar <code>showInfo: true,</code>. Si no se agrega, la caja no se muestra. Con <code>showInfo: false,</code> queda oculta.</p>
+
+        <h2>Varios diagramas</h2>
+        <p>Si defines varios bloques <code>attribute</code>, Qify crea un diagrama por atributo. Usa los controles flotantes del visualizador para avanzar, retroceder, hacer zoom, alejar o restablecer la vista.</p>
+
+        <h2>Exportación</h2>
+        <ul>
+          <li><strong>Export PNG</strong>: descarga una imagen rasterizada del diagrama.</li>
+          <li><strong>Export SVG</strong>: descarga SVG puro sin <code>foreignObject</code>.</li>
+          <li><strong>Export PDF</strong>: convierte el SVG puro a PDF seleccionable directamente en el navegador.</li>
+          <li><strong>Download .qify</strong>: guarda el texto actual del editor.</li>
+          <li><strong>Import .qify</strong>: carga un archivo DSL existente.</li>
+        </ul>
+
+        <h2>Categorías soportadas</h2>
+        <p>Incluye familias ISO 25010 como <code>FunctionalSuitability</code>, <code>PerformanceEfficiency</code>, <code>Compatibility</code>, <code>InteractionCapability</code>, <code>Reliability</code>, <code>Security</code>, <code>Maintainability</code>, <code>Flexibility</code> y <code>Safety</code>.</p>
+
+        <h2>Licencia y desarrollador</h2>
+        <p><strong>Licencia:</strong> GPL-3.0 license.</p>
+        <p><strong>Desarrollador:</strong>
+        <a
+          href="https://github.com/LePeanutButter"
+          target="_blank" rel="noopener noreferrer"
+          style="color: #cccccc;">
+          LePeanutButter.
+        </a>
+        </p>
+      </div>
+    </section>
     <canvas id="canvas" width="800" height="600"></canvas>
   </div>
 </div>
