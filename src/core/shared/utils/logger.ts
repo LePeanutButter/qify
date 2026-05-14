@@ -202,24 +202,24 @@ export class Logger {
 
   /**
    * Get console styling for log level
+   * Note: Commenting out unused function to fix TypeScript strict mode
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private getConsoleStyle(level: LogLevel): string {
-    switch (level) {
-      case LogLevel.DEBUG:
-        return 'color: #888; font-style: italic;';
-      case LogLevel.INFO:
-        return 'color: #007bff; font-weight: bold;';
-      case LogLevel.WARN:
-        return 'color: #ffc107; font-weight: bold;';
-      case LogLevel.ERROR:
-        return 'color: #dc3545; font-weight: bold;';
-      case LogLevel.FATAL:
-        return 'color: #6f42c1; font-weight: bold; background: #ffe6ff;';
-      default:
-        return '';
-    }
-  }
+  // private getConsoleStyle(level: LogLevel): string {
+  //   switch (level) {
+  //     case LogLevel.DEBUG:
+  //       return 'color: #888; font-style: italic;';
+  //     case LogLevel.INFO:
+  //       return 'color: #007bff; font-weight: bold;';
+  //     case LogLevel.WARN:
+  //       return 'color: #ffc107; font-weight: bold;';
+  //     case LogLevel.ERROR:
+  //       return 'color: #dc3545; font-weight: bold;';
+  //     case LogLevel.FATAL:
+  //       return 'color: #6f42c1; font-weight: bold; background: #ffe6ff;';
+  //     default:
+  //       return '';
+  //   }
+  // }
 
   /**
    * Get all logs

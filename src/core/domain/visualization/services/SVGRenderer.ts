@@ -104,13 +104,13 @@ export function createRect(
     }
     
     if (styleParts.length > 0) {
-      attrs.style = styleParts.join(';');
+      attrs['style'] = styleParts.join(';');
     }
     
     if (options.strokeWidth) attrs['stroke-width'] = options.strokeWidth;
-    if (options.rx) attrs.rx = options.rx;
-    if (options.ry) attrs.ry = options.ry;
-    if (options.id) attrs.id = options.id;
+    if (options.rx) attrs['rx'] = options.rx;
+    if (options.ry) attrs['ry'] = options.ry;
+    if (options.id) attrs['id'] = options.id;
   }
   return createSVGElement('rect', attrs);
 }
@@ -133,11 +133,11 @@ export function createCircle(
   const attrs: Record<string, string | number> = { cx, cy, r };
   
   if (options) {
-    if (options.fill) attrs.fill = options.fill;
-    if (options.stroke) attrs.stroke = options.stroke;
+    if (options.fill) attrs['fill'] = options.fill;
+    if (options.stroke) attrs['stroke'] = options.stroke;
     if (options.strokeWidth) attrs['stroke-width'] = options.strokeWidth;
-    if (options.opacity) attrs.opacity = options.opacity;
-    if (options.id) attrs.id = options.id;
+    if (options.opacity) attrs['opacity'] = options.opacity;
+    if (options.id) attrs['id'] = options.id;
   }
   
   return createSVGElement('circle', attrs);
@@ -161,10 +161,10 @@ export function createLine(
   const attrs: Record<string, string | number> = { x1, y1, x2, y2 };
   
   if (options) {
-    if (options.stroke) attrs.stroke = options.stroke;
+    if (options.stroke) attrs['stroke'] = options.stroke;
     if (options.strokeWidth) attrs['stroke-width'] = options.strokeWidth;
-    if (options.opacity) attrs.opacity = options.opacity;
-    if (options.id) attrs.id = options.id;
+    if (options.opacity) attrs['opacity'] = options.opacity;
+    if (options.id) attrs['id'] = options.id;
   }
   
   return createSVGElement('line', attrs);
@@ -186,11 +186,11 @@ export function createPath(
   const attrs: Record<string, string | number> = { d };
   
   if (options) {
-    if (options.fill) attrs.fill = options.fill;
-    if (options.stroke) attrs.stroke = options.stroke;
+    if (options.fill) attrs['fill'] = options.fill;
+    if (options.stroke) attrs['stroke'] = options.stroke;
     if (options.strokeWidth) attrs['stroke-width'] = options.strokeWidth;
-    if (options.opacity) attrs.opacity = options.opacity;
-    if (options.id) attrs.id = options.id;
+    if (options.opacity) attrs['opacity'] = options.opacity;
+    if (options.id) attrs['id'] = options.id;
   }
   
   return createSVGElement('path', attrs);
@@ -212,11 +212,11 @@ export function createPolygon(
   const attrs: Record<string, string | number> = { points };
   
   if (options) {
-    if (options.fill) attrs.fill = options.fill;
-    if (options.stroke) attrs.stroke = options.stroke;
+    if (options.fill) attrs['fill'] = options.fill;
+    if (options.stroke) attrs['stroke'] = options.stroke;
     if (options.strokeWidth) attrs['stroke-width'] = options.strokeWidth;
-    if (options.opacity) attrs.opacity = options.opacity;
-    if (options.id) attrs.id = options.id;
+    if (options.opacity) attrs['opacity'] = options.opacity;
+    if (options.id) attrs['id'] = options.id;
   }
   
   return createSVGElement('polygon', attrs);
@@ -246,10 +246,10 @@ export function createText(
     if (options.fontSize) attrs['font-size'] = options.fontSize;
     if (options.fontFamily) attrs['font-family'] = options.fontFamily;
     if (options.fontWeight) attrs['font-weight'] = options.fontWeight;
-    if (options.fill) attrs.fill = options.fill;
+    if (options.fill) attrs['fill'] = options.fill;
     if (options.textAnchor) attrs['text-anchor'] = options.textAnchor;
     if (options.dominantBaseline) attrs['dominant-baseline'] = options.dominantBaseline;
-    if (options.id) attrs.id = options.id;
+    if (options.id) attrs['id'] = options.id;
   }
   
   const text = createSVGElement('text', attrs);
@@ -281,10 +281,10 @@ export function createTextWithLines(
     if (options.fontSize) attrs['font-size'] = options.fontSize;
     if (options.fontFamily) attrs['font-family'] = options.fontFamily;
     if (options.fontWeight) attrs['font-weight'] = options.fontWeight;
-    if (options.fill) attrs.fill = options.fill;
+    if (options.fill) attrs['fill'] = options.fill;
     if (options.textAnchor) attrs['text-anchor'] = options.textAnchor;
     if (options.dominantBaseline) attrs['dominant-baseline'] = options.dominantBaseline;
-    if (options.id) attrs.id = options.id;
+    if (options.id) attrs['id'] = options.id;
   }
   
   const text = createSVGElement('text', attrs);
@@ -611,7 +611,7 @@ export function wrapText(
 export function getTextDimensions(
   text: string,
   fontSize: number = 12,
-  fontFamily: string = 'Arial'
+  _fontFamily: string = 'Arial'
 ): { width: number; height: number } {
   // Rough approximation - actual values depend on the font
   const charWidth = fontSize * 0.5;

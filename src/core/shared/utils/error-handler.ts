@@ -236,7 +236,7 @@ export class ErrorHandler {
   /**
    * Determine if error is recoverable
    */
-  private isRecoverable(error: Error, type?: ErrorType): boolean {
+  private isRecoverable(_error: Error, type?: ErrorType): boolean {
     switch (type) {
       case ErrorType.PARSE_ERROR:
         return true; // Can be recovered by fixing syntax
@@ -566,7 +566,7 @@ export const handleError = (
   context: Partial<ErrorContext>,
   options?: {
     type?: ErrorType;
-    severity?: ErrorSeverity;
+    severity?: SeverityLevel;
     recoverable?: boolean;
     recoveryStrategy?: RecoveryStrategy;
   }

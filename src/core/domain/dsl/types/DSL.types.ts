@@ -153,7 +153,7 @@ export class QualityCategoryUtils {
    * Gets the main category from a full category string
    */
   static getMainCategory(category: QualityCategory): string {
-    return category.split('.')[0];
+    return category.split('.')[0] || 'Unknown';
   }
 
   /**
@@ -161,7 +161,7 @@ export class QualityCategoryUtils {
    */
   static getSubCategory(category: QualityCategory): string | null {
     const parts = category.split('.');
-    return parts.length > 1 ? parts[1] : null;
+    return (parts.length > 1 ? parts[1] : null) || null;
   }
 
   /**

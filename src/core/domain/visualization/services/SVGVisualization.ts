@@ -328,7 +328,7 @@ export class SVGVisualizer {
   }
 
   private setWrappedText(svg: Element, ids: TextLineIds, value: string): void {
-    const maxLines = ids.length;
+    // const maxLines = ids.length;
     const lines = this.wrapFixedWidth(value || '', ids.length === 1 ? 18 : 16);
 
     ids.forEach((id, index) => {

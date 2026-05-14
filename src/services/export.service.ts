@@ -136,7 +136,7 @@ export class ExportService {
   private async svgToPdfBlob(svgText: string): Promise<Blob> {
     const { jsPDF } = await import('jspdf');
     const svg2pdfModule = await import('svg2pdf.js');
-    const svg2pdf = svg2pdfModule.default ?? (svg2pdfModule as any).svg2pdf;
+    const svg2pdf = ((svg2pdfModule.default ?? (svg2pdfModule as any).svg2pdf) as unknown) as (svgElement: SVGSVGElement, pdf: any, options: any) => Promise<void>;
 
     if (typeof svg2pdf !== 'function') {
       throw new Error('svg2pdf.js export not found');
@@ -174,7 +174,7 @@ export class ExportService {
     const viewBox = svgElement.getAttribute('viewBox')?.trim();
     if (viewBox) {
       const parts = viewBox.split(/\s+/).map(Number);
-      if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+      if (parts.length === 4 && parts[2] != null && parts[3] != null && parts[2] > 0 && parts[3] > 0) {
         return { width: parts[2], height: parts[3] };
       }
     }

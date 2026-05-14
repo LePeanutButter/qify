@@ -99,7 +99,7 @@ export class DSLParser {
 
       tokens.push({
         type: 'UNKNOWN',
-        value: text[position],
+        value: text.charAt(position) || '',
         position,
         line,
         column
@@ -308,7 +308,7 @@ export class DSLParser {
 
     return {
       type: 'ScenarioDeclaration',
-      position: children.length > 0 ? children[0].position : 0,
+      position: children.length > 0 && children[0] ? children[0].position : 0,
       children
     };
   }
@@ -447,7 +447,7 @@ export class DSLParser {
     if (node.children && node.children.length > 0) {
       const identifierNode = node.children[0];
       
-      if (identifierNode.type === 'Identifier') {
+      if (identifierNode && identifierNode.type === 'Identifier') {
         // Extract the actual name from the token
         const token = this.tokens.find(t => t.position === identifierNode.position);
         if (token) name = token.value;
@@ -521,7 +521,7 @@ export class DSLParser {
     let name = 'Default Artifact';
     if (node.children && node.children.length > 0) {
       const stringNode = node.children[0];
-      if (stringNode.type === 'StringLiteral') {
+      if (stringNode && stringNode.type === 'StringLiteral') {
         const token = this.tokens.find(t => t.position === stringNode.position);
         if (token) name = token.value.replaceAll('"', '');
       }
@@ -534,15 +534,17 @@ export class DSLParser {
 
     if (node.children && node.children.length > 0) {
       const stringNode = node.children[0];
-      if (stringNode.value) {
-        category = stringNode.value;
-      } else if (stringNode.type === 'StringLiteral') {
-        const token = this.tokens.find(t => t.position === stringNode.position);
-        if (token) category = token.value.replaceAll('"', '');
-      } else if (stringNode.type === 'Identifier') {
-        // Handle unquoted categories
-        const token = this.tokens.find(t => t.position === stringNode.position);
-        if (token) category = token.value;
+      if (stringNode) {
+        if (stringNode.value) {
+          category = stringNode.value;
+        } else if (stringNode.type === 'StringLiteral') {
+          const token = this.tokens.find(t => t.position === stringNode.position);
+          if (token) category = token.value.replaceAll('"', '');
+        } else if (stringNode.type === 'Identifier') {
+          // Handle unquoted categories
+          const token = this.tokens.find(t => t.position === stringNode.position);
+          if (token) category = token.value;
+        }
       }
     }
     return category as QualityCategory;
@@ -586,7 +588,7 @@ export class DSLParser {
     let text = 'Default Source';
     if (node.children && node.children.length > 0) {
       const stringNode = node.children[0];
-      if (stringNode.type === 'StringLiteral') {
+      if (stringNode && stringNode.type === 'StringLiteral') {
         const token = this.tokens.find(t => t.position === stringNode.position);
         if (token) text = token.value.replaceAll('"', '');
       }
@@ -598,7 +600,7 @@ export class DSLParser {
     let text = 'Default Stimulus';
     if (node.children && node.children.length > 0) {
       const stringNode = node.children[0];
-      if (stringNode.type === 'StringLiteral') {
+      if (stringNode && stringNode.type === 'StringLiteral') {
         const token = this.tokens.find(t => t.position === stringNode.position);
         if (token) text = token.value.replaceAll('"', '');
       }
@@ -610,7 +612,7 @@ export class DSLParser {
     let text = 'Default Environment';
     if (node.children && node.children.length > 0) {
       const stringNode = node.children[0];
-      if (stringNode.type === 'StringLiteral') {
+      if (stringNode && stringNode.type === 'StringLiteral') {
         const token = this.tokens.find(t => t.position === stringNode.position);
         if (token) text = token.value.replaceAll('"', '');
       }
@@ -622,7 +624,7 @@ export class DSLParser {
     let text = 'Default Response';
     if (node.children && node.children.length > 0) {
       const stringNode = node.children[0];
-      if (stringNode.type === 'StringLiteral') {
+      if (stringNode && stringNode.type === 'StringLiteral') {
         const token = this.tokens.find(t => t.position === stringNode.position);
         if (token) text = token.value.replaceAll('"', '');
       }
@@ -634,7 +636,7 @@ export class DSLParser {
     let text = 'Default Measure';
     if (node.children && node.children.length > 0) {
       const stringNode = node.children[0];
-      if (stringNode.type === 'StringLiteral') {
+      if (stringNode && stringNode.type === 'StringLiteral') {
         const token = this.tokens.find(t => t.position === stringNode.position);
         if (token) text = token.value.replaceAll('"', '');
       }
@@ -736,11 +738,13 @@ export class DSLParser {
   }
 
   private peek(): Token {
-    return this.tokens[this.current];
+    const token = this.tokens[this.current];
+    return token || { type: 'EOF', value: '', position: -1, line: 0, column: 0 };
   }
 
   private previous(): Token {
-    return this.tokens[this.current - 1];
+    const token = this.tokens[this.current - 1];
+    return token || { type: 'EOF', value: '', position: -1, line: 0, column: 0 };
   }
 
   private advance(): Token {

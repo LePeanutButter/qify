@@ -26,7 +26,7 @@ export class SyntaxHighlighter {
 
     // Step 3: Highlight system and attribute names
     // system Name { ... }
-    processed = processed.replace(/\b(system|attribute)\b\s+([A-Za-z_]\w*)/g, (match, kw, name) => {
+    processed = processed.replace(/\b(system|attribute)\b\s+([A-Za-z_]\w*)/g, (_match, kw, name) => {
       return `<span class="keyword">${kw}</span> <span class="number">${name}</span>`;
     });
 
