@@ -13,7 +13,7 @@ export default defineConfig({
     })
   ],
   root: workspaceRoot,
-  base: './',
+  base: '/qify/',
   build: {
     outDir: 'dist',
     emptyOutDir: true,
