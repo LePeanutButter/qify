@@ -189,14 +189,21 @@ export class SVGVisualizer {
     // B. Calculate pushes
     const scenarioPush = artifactExtra + 10;
     
-    // We use a much larger buffer for the info box to ensure it's well below everything
-    const infoPush = scenarioPush + scenarioExtra + 50; 
+    // Use a small buffer to maintain the original gap exactly
+    const infoPush = scenarioPush + scenarioExtra; 
 
     const scenarioElements = [
       'text96', 'text104', 'text116', 'text124', 'text132',
       'text100', 'text108', 'text112', 'text120', 'text128', 'text136', 'text140'
     ];
-    const infoElements = ['path142', 'path144', 'g146', 'g164', 'g182', 'g200'];
+    // Move the actual text elements instead of the outer groups so they are scaled correctly!
+    const infoElements = [
+      'path142', 'path144', 
+      'text158', 'text162', 
+      'text176', 'text180', 
+      'text194', 'text198', 
+      'text212', 'text216'
+    ];
 
     scenarioElements.forEach(id => this.moveElement(svg, id, scenarioPush));
     infoElements.forEach(id => this.moveElement(svg, id, infoPush));
