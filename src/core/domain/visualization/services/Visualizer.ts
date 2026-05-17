@@ -167,6 +167,11 @@ export class DSLVisualizer {
     if (this.svgContainer) {
       this.svgContainer.innerHTML = this.lastSvgString;
       this.renderCanvasControls();
+      
+      // Auto-fit diagram on load
+      setTimeout(() => {
+        this.resetDiagramZoom();
+      }, 10);
     }
 
     if (this.errors.length > 0) {
@@ -517,9 +522,40 @@ export class DSLVisualizer {
       controls.append(prev, counter, next, this.createDivider());
     }
 
+    const zoomInput = document.createElement('input');
+    zoomInput.type = 'text';
+    zoomInput.className = 'canvas-control-btn wide zoom-input';
+    zoomInput.title = 'Current zoom (click to edit)';
+    zoomInput.id = 'zoomInput';
+    zoomInput.value = '100%';
+    zoomInput.style.textAlign = 'center';
+    zoomInput.style.width = '45px';
+    zoomInput.style.border = 'none';
+    zoomInput.style.background = 'transparent';
+    zoomInput.style.fontFamily = 'inherit';
+    zoomInput.style.color = '#fff';
+    zoomInput.style.fontWeight = 'bold';
+    zoomInput.style.cursor = 'text';
+    zoomInput.addEventListener('change', (e) => {
+      const val = parseInt((e.target as HTMLInputElement).value, 10);
+      if (!isNaN(val) && val > 0) {
+        const zoomTo = (globalThis as any).setDiagramZoom;
+        if (zoomTo) zoomTo(val / 100);
+      } else {
+        const currentScale = (globalThis as any).currentScale || 1;
+        (e.target as HTMLInputElement).value = Math.round(currentScale * 100) + '%';
+      }
+    });
+    
+    // Update it with current scale immediately
+    setTimeout(() => {
+      const currentScale = (globalThis as any).currentScale || 1;
+      zoomInput.value = Math.round(currentScale * 100) + '%';
+    }, 20);
+
     controls.append(
       this.createControlButton('-', 'Zoom out', () => this.zoomDiagram(0.9)),
-      this.createControlButton('100', 'Reset zoom', () => this.resetDiagramZoom(), 'wide'),
+      zoomInput,
       this.createControlButton('+', 'Zoom in', () => this.zoomDiagram(1.1))
     );
 
