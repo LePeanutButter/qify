@@ -67,34 +67,7 @@ body {
   /* Chrome/Safari/Opera */
 }
 
-textarea {
-  position: absolute;
-  top: 20px;
-  left: 60px;
-  width: calc(100% - 80px);
-  height: calc(100% - 40px);
-  background: transparent;
-  border: none;
-  color: transparent;
-  font-family: "Fira Code", monospace;
-  font-size: 14px;
-  line-height: 22px; /* Fixed line height for better sync */
-  white-space: pre-wrap; /* Enable word wrap */
-  word-wrap: break-word;
-  outline: none;
-  resize: none;
-  caret-color: #e6e6e6;
-  z-index: 2;
-  padding: 0;
-  margin: 0;
-  box-sizing: border-box;
-  overflow-y: auto;
-  overflow-x: hidden;
-  text-align: left;
-  letter-spacing: normal;
-  tab-size: 2;
-  scrollbar-gutter: stable;
-}
+/* Textarea styles removed because we are using contenteditable instead */
 
 .syntax-highlight {
   position: absolute;
@@ -109,9 +82,11 @@ textarea {
   line-height: 22px; /* Must match textarea */
   white-space: pre-wrap; /* Match textarea */
   word-wrap: break-word;
-  pointer-events: none;
-  z-index: 1;
-  overflow: hidden; /* Controlled by textarea scroll */
+  /* Pointer events enabled since this is the editable element now */
+  pointer-events: auto;
+  outline: none;
+  z-index: 2;
+  overflow-y: auto;
   padding: 0;
   margin: 0;
   box-sizing: border-box;
@@ -122,8 +97,22 @@ textarea {
 }
 
 .syntax-highlight::-webkit-scrollbar {
-  display: none;
-  /* Chrome/Safari/Opera */
+  width: 12px;
+  background: transparent;
+}
+
+.syntax-highlight::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.syntax-highlight::-webkit-scrollbar-thumb {
+  background-color: rgba(121, 121, 121, 0.4);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.syntax-highlight::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 100, 100, 0.7);
 }
 
 .syntax-highlight .new-char {
@@ -697,8 +686,6 @@ canvas {
 .error-line-highlight {
   background: rgba(255, 77, 79, 0.15);
   border-bottom: 2px wavy #ff4d4f;
-  display: block;
-  width: 100%;
 }
 
 .error-position {

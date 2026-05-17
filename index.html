@@ -29,11 +29,7 @@
   <div class="editor code-editor">
     <div class="editor-container">
       <div id="lineNumbers" class="line-numbers"></div>
-      <div id="syntaxHighlight" class="syntax-highlight"></div>
-      <textarea id="code" placeholder='Enter your Quality Attribute DSL here...
-
-Example:
-system Ecommerce
+      <div id="code" class="syntax-highlight" contenteditable="true" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off">system Ecommerce
 
 attribute PerformanceCheckout {
   artifact: "CheckoutService"
@@ -42,9 +38,9 @@ attribute PerformanceCheckout {
   source: "external user"
   stimulus: "1000 concurrent users"
   environment: "peak hours"
-  response: "response time < 2s"
+  response: "response time &lt; 2s"
   measure: "latency percentile p95"
-}'></textarea>
+}</div>
     </div>
 
     <div class="toolbar">

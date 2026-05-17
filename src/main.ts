@@ -6,7 +6,7 @@
 import { DSLVisualizer } from './core/domain/visualization/services/Visualizer';
 import { ExportService } from './services/export.service';
 import { EditorManager } from './hooks/use-editor';
-import { updateStatus, triggerDownload, copyErrors } from './utils/dom.utils';
+import { updateStatus, triggerDownload, copyErrors, sanitizeFileName } from './utils/dom.utils';
 
 // Global instances
 let visualizer: DSLVisualizer;
@@ -46,9 +46,12 @@ function setupGlobalActions(): void {
   (window as any).toggleExamples = () => editor.toggleExamples();
   (window as any).loadExample = (name: string) => editor.loadExample(name);
   (window as any).downloadCode = () => {
-    const code = (document.getElementById('code') as HTMLTextAreaElement)?.value;
+    const codeElement = document.getElementById('code');
+    const code = codeElement ? (codeElement.textContent || '') : '';
     if (code) {
-      triggerDownload(new Blob([code], { type: 'text/plain' }), 'code.qify');
+      const program = visualizer.getCurrentProgram();
+      const systemName = program?.system?.name ? sanitizeFileName(program.system.name) : 'code';
+      triggerDownload(new Blob([code], { type: 'application/octet-stream' }), `${systemName}.qify`);
       updateStatus('Code downloaded');
     }
   };
@@ -58,10 +61,10 @@ function setupGlobalActions(): void {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (file) {
       file.text().then(content => {
-        const area = document.getElementById('code') as HTMLTextAreaElement;
+        const area = document.getElementById('code');
         if (area) {
-          area.value = content;
-          editor.handleCodeInput();
+          area.textContent = content;
+          editor.handleCodeInput(true);
           updateStatus('Code imported');
         }
       });

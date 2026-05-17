@@ -54,7 +54,7 @@ attribute PatientDataAvailability {
 
 attribute UsabilityForClinicians {
   artifact: "PatientDashboard",
-  category: Usability.Operability,
+  category: InteractionCapability.Operability,
   
   source: "healthcare providers",
   stimulus: "patient data entry",
@@ -92,15 +92,15 @@ attribute Scalability {
  * DSL Keywords for syntax highlighting
  */
 export const KEYWORDS = [
-  'system', 
-  'attribute', 
-  'artifact', 
-  'category', 
-  'source', 
-  'stimulus', 
-  'environment', 
-  'response', 
-  'measure', 
+  'system',
+  'attribute',
+  'artifact',
+  'category',
+  'source',
+  'stimulus',
+  'environment',
+  'response',
+  'measure',
   'showInfo'
 ];
 

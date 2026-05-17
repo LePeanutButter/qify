@@ -1,4 +1,6 @@
 import JSZip from 'jszip';
+import { jsPDF } from 'jspdf';
+import { svg2pdf } from 'svg2pdf.js';
 import type { DSLVisualizer } from '../core/domain/visualization/services/Visualizer';
 import { sanitizeFileName, triggerDownload, updateStatus } from '../utils/dom.utils';
 
@@ -134,11 +136,9 @@ export class ExportService {
    * Convert SVG text to PDF Blob
    */
   private async svgToPdfBlob(svgText: string): Promise<Blob> {
-    const { jsPDF } = await import('jspdf');
-    const svg2pdfModule = await import('svg2pdf.js');
-    const svg2pdf = ((svg2pdfModule.default ?? (svg2pdfModule as any).svg2pdf) as unknown) as (svgElement: SVGSVGElement, pdf: any, options: any) => Promise<void>;
+    const svg2pdfFn = (svg2pdf as unknown) as (svgElement: SVGSVGElement, pdf: any, options: any) => Promise<void>;
 
-    if (typeof svg2pdf !== 'function') {
+    if (typeof svg2pdfFn !== 'function') {
       throw new Error('svg2pdf.js export not found');
     }
 
@@ -156,7 +156,7 @@ export class ExportService {
       compress: true
     });
 
-    await svg2pdf(svgElement, pdf, {
+    await svg2pdfFn(svgElement, pdf, {
       xOffset: 0,
       yOffset: 0,
       scale: 1,
@@ -164,7 +164,8 @@ export class ExportService {
       height
     });
 
-    return pdf.output('blob');
+    const rawBlob = pdf.output('blob');
+    return new Blob([rawBlob], { type: 'application/octet-stream' });
   }
 
   /**

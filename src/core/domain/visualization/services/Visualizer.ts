@@ -13,6 +13,8 @@ import type {
 } from '../../dsl/types/DSL.types';
 import { DSLParser } from '../../dsl/services/DSLParser';
 import { SVGVisualizer } from './SVGVisualization';
+import { jsPDF } from 'jspdf';
+import { svg2pdf } from 'svg2pdf.js';
 
 /**
  * Visual configuration interface
@@ -361,9 +363,6 @@ export class DSLVisualizer {
    */
   async exportPDF(): Promise<void> {
     try {
-      // Dynamic imports for optional PDF dependencies
-      const { jsPDF } = await import('jspdf');
-
       if (!this.lastSvgString) {
         throw new Error('No visualization to export');
       }
@@ -384,11 +383,10 @@ export class DSLVisualizer {
 
       // Try to import svg2pdf for advanced PDF conversion
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const svg2pdfModule: any = await import('svg2pdf.js');
+        const svg2pdfFn = (svg2pdf as unknown) as (svgElement: SVGSVGElement, pdf: any, options: any) => Promise<void>;
         
         // Convert SVG to PDF
-        await svg2pdfModule.default(svgElement, pdf, {
+        await svg2pdfFn(svgElement, pdf, {
           xOffset: 0,
           yOffset: 0,
           scale: 1,

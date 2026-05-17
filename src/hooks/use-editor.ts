@@ -13,18 +13,22 @@ import { EXAMPLES } from '../constants/dsl.constants';
  * Hook-like service to manage editor state and event listeners
  */
 export class EditorManager {
-  private codeTextarea: HTMLTextAreaElement | null = null;
-  private syntaxHighlightDiv: HTMLElement | null = null;
+  private codeElement: HTMLElement | null = null;
   private lineNumbersDiv: HTMLElement | null = null;
   private examplesDiv: HTMLElement | null = null;
+  private isHighlighting: boolean = false;
+  
+  // Undo/Redo stack
+  private history: { text: string; caretPos: number }[] = [];
+  private historyIndex: number = -1;
+  private isUndoRedo: boolean = false;
 
   constructor(private visualizer: DSLVisualizer) {
     this.initElements();
   }
 
   private initElements(): void {
-    this.codeTextarea = document.getElementById('code') as HTMLTextAreaElement;
-    this.syntaxHighlightDiv = document.getElementById('syntaxHighlight');
+    this.codeElement = document.getElementById('code');
     this.lineNumbersDiv = document.getElementById('lineNumbers');
     this.examplesDiv = document.getElementById('examples');
   }
@@ -33,14 +37,32 @@ export class EditorManager {
    * Set up all editor event listeners
    */
   setupEventListeners(): void {
-    if (this.codeTextarea) {
-      // Use input for content changes and scroll for positioning
-      this.codeTextarea.addEventListener('input', () => this.handleCodeInput());
-      this.codeTextarea.addEventListener('scroll', () => this.syncScroll());
-      this.codeTextarea.addEventListener('keydown', (e) => this.handleKeyDown(e));
+    if (this.codeElement) {
+      this.codeElement.addEventListener('input', () => this.handleCodeInput());
+      this.codeElement.addEventListener('scroll', () => this.syncScroll());
+      this.codeElement.addEventListener('keydown', (e) => this.handleKeyDown(e));
       
-      // Sync on initial load
-      this.syncScroll();
+      this.codeElement.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = e.clipboardData?.getData('text/plain');
+        if (text) {
+          const sel = window.getSelection();
+          if (sel && sel.rangeCount > 0) {
+            const range = sel.getRangeAt(0);
+            range.deleteContents();
+            const textNode = document.createTextNode(text);
+            range.insertNode(textNode);
+            range.setStartAfter(textNode);
+            range.setEndAfter(textNode);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            this.handleCodeInput();
+          }
+        }
+      });
+      
+      // Perform initial highlighting and rendering
+      this.handleCodeInput(true);
     }
 
     // Close examples when clicking outside
@@ -52,20 +74,119 @@ export class EditorManager {
     });
   }
 
+  private saveHistory(text: string, caretPos: number) {
+    if (this.historyIndex >= 0 && this.history[this.historyIndex]?.text === text) return;
+    this.history = this.history.slice(0, this.historyIndex + 1);
+    this.history.push({ text, caretPos });
+    this.historyIndex++;
+  }
+
+  private handleUndo() {
+    if (this.historyIndex > 0) {
+      this.historyIndex--;
+      const state = this.history[this.historyIndex];
+      if (state) this.applyHistoryState(state);
+    }
+  }
+
+  private handleRedo() {
+    if (this.historyIndex < this.history.length - 1) {
+      this.historyIndex++;
+      const state = this.history[this.historyIndex];
+      if (state) this.applyHistoryState(state);
+    }
+  }
+
+  private applyHistoryState(state: { text: string; caretPos: number }) {
+    if (!this.codeElement) return;
+    this.isUndoRedo = true;
+    this.codeElement.textContent = state.text;
+    this.handleCodeInput(false, state.caretPos);
+    this.isUndoRedo = false;
+  }
+
+  private getCaretPosition(element: HTMLElement): number {
+    let caretOffset = 0;
+    const doc = element.ownerDocument;
+    const win = doc.defaultView || window;
+    const sel = win.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      const preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(element);
+      preCaretRange.setEnd(range.endContainer, range.endOffset);
+      caretOffset = preCaretRange.toString().length;
+    }
+    return caretOffset;
+  }
+
+  private setCaretPosition(element: HTMLElement, offset: number) {
+    let charIndex = 0;
+    const range = document.createRange();
+    range.setStart(element, 0);
+    range.collapse(true);
+    const nodeStack: Node[] = [element];
+    let node: Node | undefined;
+    let foundStart = false;
+    let stop = false;
+
+    while (!stop && (node = nodeStack.pop())) {
+      if (node.nodeType === 3) {
+        const nextCharIndex = charIndex + (node.textContent?.length || 0);
+        if (!foundStart && offset >= charIndex && offset <= nextCharIndex) {
+          range.setStart(node, offset - charIndex);
+          foundStart = true;
+        }
+        if (foundStart && offset >= charIndex && offset <= nextCharIndex) {
+          range.setEnd(node, offset - charIndex);
+          stop = true;
+        }
+        charIndex = nextCharIndex;
+      } else {
+        let i = node.childNodes.length;
+        while (i--) {
+          const child = node.childNodes[i];
+          if (child) nodeStack.push(child);
+        }
+      }
+    }
+
+    const sel = window.getSelection();
+    if (sel) {
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  }
+
   /**
    * Handle code input: highlight, validate, and render
    */
-  handleCodeInput(): void {
-    if (!this.codeTextarea || !this.syntaxHighlightDiv) return;
+  handleCodeInput(initial: boolean = false, overrideCaretPos: number = -1): void {
+    if (!this.codeElement || this.isHighlighting) return;
 
-    const text = this.codeTextarea.value;
+    this.isHighlighting = true;
     
+    // We use textContent because we strictly maintain \n text nodes and prevent divs/brs
+    let text = this.codeElement.textContent || '';
+
+    // Save cursor position
+    const caretPos = overrideCaretPos !== -1 ? overrideCaretPos : (initial ? 0 : this.getCaretPosition(this.codeElement));
+
+    if (!this.isUndoRedo && !initial) {
+      this.saveHistory(text, caretPos);
+    }
+
     // 1. Validate DSL first to get latest errors
     const parseResult = DSLParser.parseDSL(text);
     const errors = parseResult.errors || [];
 
     // 2. Update syntax highlighting with error info
-    this.syntaxHighlightDiv.innerHTML = SyntaxHighlighter.highlight(text, errors);
+    this.codeElement.innerHTML = SyntaxHighlighter.highlight(text, errors);
+
+    // Restore cursor position
+    if (!initial) {
+      this.setCaretPosition(this.codeElement, caretPos);
+    }
 
     // 3. Update line numbers with wrap support
     if (this.lineNumbersDiv) {
@@ -76,7 +197,7 @@ export class EditorManager {
       if (!mirror) {
         mirror = document.createElement('div');
         mirror.id = 'line-mirror';
-        // Match textarea styles exactly
+        // Match element styles exactly
         mirror.style.position = 'absolute';
         mirror.style.visibility = 'hidden';
         mirror.style.whiteSpace = 'pre-wrap';
@@ -84,12 +205,12 @@ export class EditorManager {
         mirror.style.fontFamily = '"Fira Code", monospace';
         mirror.style.fontSize = '14px';
         mirror.style.lineHeight = '22px';
-        mirror.style.width = this.codeTextarea.clientWidth + 'px';
+        mirror.style.width = this.codeElement.clientWidth + 'px';
         mirror.style.padding = '0';
         mirror.style.tabSize = '2';
         document.body.appendChild(mirror);
       } else {
-        mirror.style.width = this.codeTextarea.clientWidth + 'px';
+        mirror.style.width = this.codeElement.clientWidth + 'px';
       }
 
       let lineNumbersHTML = '';
@@ -102,9 +223,9 @@ export class EditorManager {
       this.lineNumbersDiv.innerHTML = lineNumbersHTML;
     }
 
-    this.syntaxHighlightDiv.dataset['lineCount'] = text.split('\n').length.toString();
+    this.codeElement.dataset['lineCount'] = text.split('\n').length.toString();
 
-    // 4. Sync scroll immediately (especially if line count changed)
+    // 4. Sync scroll immediately
     this.syncScroll();
 
     // 5. Update Status and Render
@@ -114,56 +235,70 @@ export class EditorManager {
     } else {
       clearCanvas();
     }
+    
+    this.isHighlighting = false;
   }
 
   /**
-   * Sync scroll between textarea, syntax highlight, and line numbers
+   * Sync scroll between editor and line numbers
    */
   syncScroll(): void {
-    if (!this.codeTextarea || !this.syntaxHighlightDiv) return;
-    
-    this.syntaxHighlightDiv.scrollTop = this.codeTextarea.scrollTop;
-    this.syntaxHighlightDiv.scrollLeft = this.codeTextarea.scrollLeft;
-    
+    if (!this.codeElement) return;
     if (this.lineNumbersDiv) {
-      this.lineNumbersDiv.scrollTop = this.codeTextarea.scrollTop;
+      this.lineNumbersDiv.scrollTop = this.codeElement.scrollTop;
     }
   }
 
   /**
-   * Handle special keys like Tab
+   * Handle special keys like Tab, Enter and Undo/Redo
    */
   private handleKeyDown(e: KeyboardEvent): void {
-    if (!this.codeTextarea) return;
+    if (!this.codeElement) return;
 
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const start = this.codeTextarea.selectionStart;
-      const end = this.codeTextarea.selectionEnd;
-      const value = this.codeTextarea.value;
-
-      if (e.shiftKey) {
-        // Shift+Tab: Remove indentation
-        const lines = value.split('\n');
-        const currentLineIndex = value.substring(0, start).split('\n').length - 1;
-        const currentLine = lines[currentLineIndex];
-
-        if (currentLine?.startsWith('  ')) {
-          lines[currentLineIndex] = currentLine.substring(2);
-          this.codeTextarea.value = lines.join('\n');
-          this.codeTextarea.selectionStart = Math.max(0, start - 2);
-          this.codeTextarea.selectionEnd = Math.max(0, end - 2);
-          this.handleCodeInput();
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          this.handleRedo();
+        } else {
+          this.handleUndo();
         }
-      } else {
-        // Tab: Add indentation
-        this.codeTextarea.setRangeText('  ', start, end, 'end');
-        this.handleCodeInput();
+        return;
+      }
+      if (e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        this.handleRedo();
+        return;
       }
     }
 
-    if (e.key === 'Enter') {
-      globalThis.setTimeout(() => this.handleCodeInput(), 0);
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        const tabNode = document.createTextNode('  ');
+        range.insertNode(tabNode);
+        range.setStartAfter(tabNode);
+        range.setEndAfter(tabNode);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        this.handleCodeInput();
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        const brNode = document.createTextNode('\n');
+        range.insertNode(brNode);
+        range.setStartAfter(brNode);
+        range.setEndAfter(brNode);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        this.handleCodeInput();
+      }
     }
   }
 
@@ -213,9 +348,13 @@ export class EditorManager {
    * Load an example into the editor
    */
   loadExample(exampleName: string): void {
-    if (this.codeTextarea && EXAMPLES[exampleName as keyof typeof EXAMPLES]) {
-      this.codeTextarea.value = EXAMPLES[exampleName as keyof typeof EXAMPLES];
-      this.handleCodeInput();
+    if (this.codeElement && EXAMPLES[exampleName as keyof typeof EXAMPLES]) {
+      this.codeElement.textContent = EXAMPLES[exampleName as keyof typeof EXAMPLES];
+      // Save initial state to history
+      const text = this.codeElement.textContent;
+      this.history = [{ text, caretPos: 0 }];
+      this.historyIndex = 0;
+      this.handleCodeInput(true);
     }
   }
 
