@@ -132,7 +132,7 @@ export class SVGVisualizer {
     const extraMeasure = Math.max(0, measureLines.length - 2);
     
     const maxExtraScenarioLines = Math.max(extraSource, extraStimulus, extraEnv, extraResp, extraMeasure);
-    const scenarioExtraHeight = maxExtraScenarioLines * 18;
+    const scenarioExtraHeight = maxExtraScenarioLines * 20;
 
     // 3. Render content
     const text76 = svg.querySelector('#text76') as SVGTextElement;
@@ -210,13 +210,13 @@ export class SVGVisualizer {
     
     if (showInfo) {
       // Info box bottom: original 290 + push
-      tightHeight = 290 + infoPush + 10; // 10px tiny buffer
+      tightHeight = 290 + infoPush + 30; // 30px buffer
     } else {
       // Scenario section bottom: 
       // Scenario values start at 159 (relative to artifact bottom)
       // We moved labels and values by scenarioPush.
       // 177 was the original bottom of the 2nd line of stimulus/measure.
-      tightHeight = 177 + scenarioPush + scenarioExtra + 30;
+      tightHeight = 177 + scenarioPush + scenarioExtra + 50;
     }
     
     svg.setAttribute('height', String(tightHeight));
@@ -233,6 +233,9 @@ export class SVGVisualizer {
         svg.setAttribute('viewBox', parts.join(' '));
       }
     }
+    
+    // Ensure no clipping paths hide the expanded content
+    svg.querySelectorAll('[clip-path]').forEach(el => el.removeAttribute('clip-path'));
   }
 
   private moveElement(svg: Element, id: string, dy: number): void {
@@ -376,10 +379,12 @@ export class SVGVisualizer {
       textElement.setAttribute('text-anchor', textAnchor);
     }
     
+    const xAttr = textElement.getAttribute('x');
+
     lines.forEach((line, index) => {
       const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
       tspan.textContent = this.escapeDisplayText(line);
-      tspan.setAttribute('x', '0');
+      tspan.setAttribute('x', xAttr || '0');
       if (index > 0) {
         tspan.setAttribute('dy', '1.2em');
       }
