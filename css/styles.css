@@ -97,8 +97,10 @@ header {
 .tab-icon-cyan { color: var(--accent-cyan); }
 
 .editor-area { flex:1; min-height: 0; display:flex; font-family: var(--font-mono); font-size:13px; line-height:1.6; padding:16px 0; overflow-y:auto; background-color: rgba(6,9,19,0.4); }
-.line-numbers { width:48px; text-align:right; padding-right:16px; color: rgba(255,255,255,0.15); user-select:none; }
-.code-input { flex:1; background:none; border:none; outline:none; color:#cbd5e1; resize:none; white-space:pre; font-family: inherit; font-size: inherit; line-height: inherit; padding-left:4px; }
+.line-numbers { width:48px; text-align:right; padding-right:16px; color: rgba(255,255,255,0.15); user-select:none; display:flex; flex-direction:column; align-items:flex-end; flex-shrink:0; }
+.line-numbers div { width:100%; display:flex; align-items:flex-start; justify-content:flex-end; line-height:1.6; }
+.line-number-empty { color: transparent; }
+.code-input { flex:1; background:none; border:none; outline:none; color:#cbd5e1; resize:none; white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; font-family: inherit; font-size: inherit; line-height: inherit; padding-left:4px; }
 .syntax-highlight { /* keep compatibility with existing JS that may query this class */ }
 
 /* token styles kept for highlighting classes used in code */
@@ -149,6 +151,13 @@ button:hover { color: var(--text-main); border-color: rgba(255,255,255,0.08); }
 .visualization { width:100%; height:100%; min-height:0; max-height:100%; position:relative; cursor:grab; display:flex; align-items:center; justify-content:center; background:#ffffff; border-radius:0; overflow:hidden; }
 .visualization > svg.diagram-template { width:100% !important; height:auto !important; max-height:100%; }
 .readme-content pre { background: transparent; border:1px solid rgba(255,255,255,0.03); padding:12px; border-radius:6px; }
+
+.error-line-highlight {
+    display: inline;
+    background: rgba(255, 77, 79, 0.14);
+    border-radius: 4px;
+    box-shadow: inset 2px 0 0 rgba(255, 77, 79, 0.55);
+}
 
 .examples {
     display: none;
@@ -201,13 +210,6 @@ button:hover { color: var(--text-main); border-color: rgba(255,255,255,0.08); }
     color: var(--text-main);
     padding-left: 15px;
 }
-
-.error-panel { position: absolute; left: 18px; bottom: 18px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,77,79,0.12); border-radius:8px; padding:12px; max-width:360px; display:none; }
-.error-panel.show { display:block; }
-.error-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-.copy-button { background: transparent; border:1px solid rgba(255,255,255,0.03); color: var(--text-muted); padding:6px 10px; border-radius:6px; cursor:pointer; }
-.error-list { max-height:200px; overflow-y:auto; }
-.error-item { padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.02); color: #ffb4b7; font-family: monospace; font-size:12px; }
 
 .canvas-controls {
     position: absolute;

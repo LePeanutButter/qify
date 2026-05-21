@@ -198,28 +198,51 @@ export class EditorManager {
       if (!mirror) {
         mirror = document.createElement('div');
         mirror.id = 'line-mirror';
-        // Match element styles exactly
         mirror.style.position = 'absolute';
         mirror.style.visibility = 'hidden';
+        mirror.style.left = '-99999px';
+        mirror.style.top = '0';
         mirror.style.whiteSpace = 'pre-wrap';
-        mirror.style.wordWrap = 'break-word';
-        mirror.style.fontFamily = '"Fira Code", monospace';
-        mirror.style.fontSize = '14px';
-        mirror.style.lineHeight = '22px';
-        mirror.style.width = this.codeElement.clientWidth + 'px';
+        mirror.style.wordBreak = 'break-word';
+        mirror.style.overflowWrap = 'anywhere';
+        mirror.style.boxSizing = 'border-box';
         mirror.style.padding = '0';
         mirror.style.tabSize = '2';
         document.body.appendChild(mirror);
-      } else {
-        mirror.style.width = this.codeElement.clientWidth + 'px';
       }
+
+      const computed = window.getComputedStyle(this.codeElement);
+      const lineHeight = Number.parseFloat(computed.lineHeight) || (Number.parseFloat(computed.fontSize) * 1.5) || 22;
+
+      mirror.style.width = `${this.codeElement.clientWidth}px`;
+      mirror.style.fontFamily = computed.fontFamily;
+      mirror.style.fontSize = computed.fontSize;
+      mirror.style.fontWeight = computed.fontWeight;
+      mirror.style.fontStyle = computed.fontStyle;
+      mirror.style.letterSpacing = computed.letterSpacing;
+      mirror.style.lineHeight = computed.lineHeight;
+      mirror.style.paddingLeft = computed.paddingLeft;
+      mirror.style.paddingRight = computed.paddingRight;
+      mirror.style.paddingTop = computed.paddingTop;
+      mirror.style.paddingBottom = computed.paddingBottom;
+      mirror.style.borderLeftWidth = computed.borderLeftWidth;
+      mirror.style.borderRightWidth = computed.borderRightWidth;
+      mirror.style.borderTopWidth = computed.borderTopWidth;
+      mirror.style.borderBottomWidth = computed.borderBottomWidth;
 
       let lineNumbersHTML = '';
       for (let i = 0; i < lines.length; i++) {
-        // Measure height of this logical line
         mirror.textContent = lines[i] || ' ';
-        const height = mirror.offsetHeight;
-        lineNumbersHTML += `<div style="height: ${height}px">${i + 1}</div>`;
+        const wrappedHeight = mirror.getBoundingClientRect().height || lineHeight;
+        const wrappedLines = Math.max(1, Math.ceil(wrappedHeight / lineHeight));
+
+        for (let wrapIndex = 0; wrapIndex < wrappedLines; wrapIndex++) {
+          if (wrapIndex === 0) {
+            lineNumbersHTML += `<div class="line-number-row">${i + 1}</div>`;
+          } else {
+            lineNumbersHTML += '<div class="line-number-row line-number-empty">&nbsp;</div>';
+          }
+        }
       }
       this.lineNumbersDiv.innerHTML = lineNumbersHTML;
     }
