@@ -71,14 +71,14 @@
 system Ecommerce
 
 attribute PerformanceCheckout {
-    artifact: "CheckoutService"
-    category: PerformanceEfficiency.TimeBehaviour
+            artifact: "CheckoutService",
+            category: PerformanceEfficiency.TimeBehaviour,
 
-    source: "external user"
-    stimulus: "1000 concurrent users"
-    environment: "peak hours"
-    response: "response time &lt; 2s"
-    measure: "latency percentile p95"
+            source: "external user",
+            stimulus: "1000 concurrent users",
+            environment: "peak hours",
+            response: "response time &lt; 2s",
+            measure: "latency percentile p95"
 }
                                         </div>
                                 </div>
@@ -125,14 +125,14 @@ attribute PerformanceCheckout {
                     <pre><code>system Ecommerce
 
 attribute PerformanceCheckout {
-  artifact: "CheckoutService"
-  category: PerformanceEfficiency.TimeBehaviour
+    artifact: "CheckoutService",
+    category: PerformanceEfficiency.TimeBehaviour,
 
-  source: "external user"
-  stimulus: "1000 concurrent users"
-  environment: "peak hours"
-  response: "response time &lt; 2s"
-  measure: "latency percentile p95"
+    source: "external user",
+    stimulus: "1000 concurrent users",
+    environment: "peak hours",
+    response: "response time &lt; 2s",
+    measure: "latency percentile p95"
 }</code></pre>
 
                     <h2>Campos del DSL</h2>
@@ -151,14 +151,14 @@ attribute PerformanceCheckout {
                     <h2>Caja de información</h2>
                     <p>La caja inferior del diagrama es opcional. Para mostrar sistema, atributo, categoría y fecha de modificación, agrega <code>showInfo</code> dentro del bloque <code>attribute</code>.</p>
                     <pre><code>attribute PerformanceCheckout {
-  artifact: "CheckoutService",
-  category: PerformanceEfficiency.TimeBehaviour,
+    artifact: "CheckoutService",
+    category: PerformanceEfficiency.TimeBehaviour,
   showInfo,
 
-  source: "external user",
-  stimulus: "1000 concurrent users",
-  environment: "peak hours",
-  response: "response time &lt; 2s",
+    source: "external user",
+    stimulus: "1000 concurrent users",
+    environment: "peak hours",
+    response: "response time &lt; 2s",
   measure: "latency percentile p95"
 }</code></pre>
                     <p>También puedes usar <code>showInfo: true,</code>. Si no se agrega, la caja no se muestra. Con <code>showInfo: false,</code> queda oculta.</p>

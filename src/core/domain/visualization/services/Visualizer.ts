@@ -8,8 +8,7 @@
 import type {
   DSLProgram,
   Attribute,
-  ValidationError,
-  ValidationResult
+  ValidationError
 } from '../../dsl/types/DSL.types';
 import { DSLParser } from '../../dsl/services/DSLParser';
 import { SVGVisualizer } from './SVGVisualization';
@@ -117,22 +116,29 @@ export class DSLVisualizer {
       // Store current DSL text for validation
       this.currentDSLText = dslText;
       this.currentAttributeIndex = 0;
-      
-      // Parse DSL
-      this.currentProgram = this.parseDSL(dslText);
-      
-      // Validate program
-      const validation = this.validateProgram();
-      this.errors = validation.errors;
+
+      const parseResult = DSLParser.parseDSL(dslText);
+      this.currentProgram = parseResult.program ?? null;
+      this.errors = parseResult.errors;
+
+      if (this.errors.length > 0) {
+        this.currentProgram = null;
+        this.renderError(this.errors[0]?.message ?? 'Invalid DSL');
+
+        return {
+          success: false,
+          errors: this.errors,
+          imageData: this.lastSvgString
+        };
+      }
 
       this.renderCurrentVisualization();
 
       return {
-        success: this.errors.length === 0,
+        success: true,
         errors: this.errors,
         imageData: this.lastSvgString
       };
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown visualization error';
       this.errors = [{ message: errorMessage, severity: 'error' }];
@@ -430,31 +436,6 @@ export class DSLVisualizer {
     return {
       width: Number.isFinite(width) && width > 0 ? width : 706.56,
       height: Number.isFinite(height) && height > 0 ? height : 310.72
-    };
-  }
-
-  /**
-   * Parse DSL text using DSLParser
-   * @param dslText The DSL text to parse
-   * @returns Parsed DSL program
-   */
-  private parseDSL(dslText: string): DSLProgram {
-    const parseResult = DSLParser.parseDSL(dslText);
-    if (!parseResult.program) {
-      throw new Error('Failed to parse DSL text');
-    }
-    return parseResult.program;
-  }
-
-  /**
-   * Validate DSL program using DSLParser errors
-   */
-  private validateProgram(): ValidationResult {
-    const parseResult = DSLParser.parseDSL(this.currentDSLText || '');
-    return {
-      isValid: parseResult.errors.length === 0,
-      errors: parseResult.errors,
-      warnings: []
     };
   }
 

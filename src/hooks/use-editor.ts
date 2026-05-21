@@ -17,6 +17,8 @@ export class EditorManager {
   private lineNumbersDiv: HTMLElement | null = null;
   private examplesDiv: HTMLElement | null = null;
   private editorAreaDiv: HTMLElement | null = null;
+  private resizeObserver: ResizeObserver | null = null;
+  private resizeRafId: number | null = null;
   private autocompleteBackdrop: HTMLElement | null = null;
   private autocompleteElement: HTMLElement | null = null;
   private autocompleteVisible = false;
@@ -83,6 +85,12 @@ export class EditorManager {
       }); 
       this.codeElement.addEventListener('scroll', () => this.syncScroll());
       this.codeElement.addEventListener('keydown', (e) => this.handleKeyDown(e));
+
+      if (this.editorAreaDiv) {
+        this.editorAreaDiv.addEventListener('scroll', () => this.syncScroll());
+      }
+
+      this.setupResizeObserver();
       
       this.codeElement.addEventListener('paste', (e) => {
         e.preventDefault();
@@ -232,62 +240,7 @@ export class EditorManager {
     }
 
     // 3. Update line numbers with wrap support
-    if (this.lineNumbersDiv) {
-      const lines = text.split('\n');
-      
-      // Create or get mirror element for height calculation
-      let mirror = document.getElementById('line-mirror');
-      if (!mirror) {
-        mirror = document.createElement('div');
-        mirror.id = 'line-mirror';
-        mirror.style.position = 'absolute';
-        mirror.style.visibility = 'hidden';
-        mirror.style.left = '-99999px';
-        mirror.style.top = '0';
-        mirror.style.whiteSpace = 'pre-wrap';
-        mirror.style.wordBreak = 'break-word';
-        mirror.style.overflowWrap = 'anywhere';
-        mirror.style.boxSizing = 'border-box';
-        mirror.style.padding = '0';
-        mirror.style.tabSize = '2';
-        document.body.appendChild(mirror);
-      }
-
-      const computed = window.getComputedStyle(this.codeElement);
-      const lineHeight = Number.parseFloat(computed.lineHeight) || (Number.parseFloat(computed.fontSize) * 1.5) || 22;
-
-      mirror.style.width = `${this.codeElement.clientWidth}px`;
-      mirror.style.fontFamily = computed.fontFamily;
-      mirror.style.fontSize = computed.fontSize;
-      mirror.style.fontWeight = computed.fontWeight;
-      mirror.style.fontStyle = computed.fontStyle;
-      mirror.style.letterSpacing = computed.letterSpacing;
-      mirror.style.lineHeight = computed.lineHeight;
-      mirror.style.paddingLeft = computed.paddingLeft;
-      mirror.style.paddingRight = computed.paddingRight;
-      mirror.style.paddingTop = computed.paddingTop;
-      mirror.style.paddingBottom = computed.paddingBottom;
-      mirror.style.borderLeftWidth = computed.borderLeftWidth;
-      mirror.style.borderRightWidth = computed.borderRightWidth;
-      mirror.style.borderTopWidth = computed.borderTopWidth;
-      mirror.style.borderBottomWidth = computed.borderBottomWidth;
-
-      let lineNumbersHTML = '';
-      for (let i = 0; i < lines.length; i++) {
-        mirror.textContent = lines[i] || ' ';
-        const wrappedHeight = mirror.getBoundingClientRect().height || lineHeight;
-        const wrappedLines = Math.max(1, Math.ceil(wrappedHeight / lineHeight));
-
-        for (let wrapIndex = 0; wrapIndex < wrappedLines; wrapIndex++) {
-          if (wrapIndex === 0) {
-            lineNumbersHTML += `<div class="line-number-row">${i + 1}</div>`;
-          } else {
-            lineNumbersHTML += '<div class="line-number-row line-number-empty">&nbsp;</div>';
-          }
-        }
-      }
-      this.lineNumbersDiv.innerHTML = lineNumbersHTML;
-    }
+    this.refreshLineNumbers(text);
 
     this.codeElement.dataset['lineCount'] = text.split('\n').length.toString();
 
@@ -324,6 +277,106 @@ export class EditorManager {
       this.autocompleteBackdrop.scrollTop = this.codeElement.scrollTop;
       this.autocompleteBackdrop.scrollLeft = this.codeElement.scrollLeft;
     }
+  }
+
+  private setupResizeObserver(): void {
+    if (!this.codeElement || !this.lineNumbersDiv || typeof ResizeObserver === 'undefined') return;
+
+    this.resizeObserver?.disconnect();
+    let lastWidth = this.codeElement.getBoundingClientRect().width;
+
+    this.resizeObserver = new ResizeObserver(entries => {
+      const entry = entries[0];
+      if (!entry) return;
+
+      const nextWidth = entry.contentRect.width;
+      if (Math.abs(nextWidth - lastWidth) < 0.5) return;
+      lastWidth = nextWidth;
+
+      if (this.resizeRafId !== null) {
+        cancelAnimationFrame(this.resizeRafId);
+      }
+
+      this.resizeRafId = requestAnimationFrame(() => {
+        this.resizeRafId = null;
+        if (!this.codeElement || !this.lineNumbersDiv) return;
+        this.refreshLineNumbers(this.codeElement.textContent || '');
+        this.syncScroll();
+      });
+    });
+
+    this.resizeObserver.observe(this.codeElement);
+    if (this.editorAreaDiv) {
+      this.resizeObserver.observe(this.editorAreaDiv);
+    }
+  }
+
+  private refreshLineNumbers(text: string): void {
+    if (!this.codeElement || !this.lineNumbersDiv) return;
+
+    const lines = text.split('\n');
+
+    let mirror = document.getElementById('line-mirror') as HTMLDivElement | null;
+    if (!mirror) {
+      mirror = document.createElement('div');
+      mirror.id = 'line-mirror';
+      mirror.style.position = 'absolute';
+      mirror.style.visibility = 'hidden';
+      mirror.style.left = '-99999px';
+      mirror.style.top = '0';
+      mirror.style.whiteSpace = 'pre-wrap';
+      mirror.style.wordBreak = 'break-word';
+      mirror.style.overflowWrap = 'anywhere';
+      mirror.style.boxSizing = 'border-box';
+      mirror.style.padding = '0';
+      mirror.style.tabSize = '2';
+      mirror.style.pointerEvents = 'none';
+      document.body.appendChild(mirror);
+    }
+
+    const computed = window.getComputedStyle(this.codeElement);
+    const lineHeight = Number.parseFloat(computed.lineHeight) || (Number.parseFloat(computed.fontSize) * 1.5) || 22;
+
+    mirror.style.width = `${this.codeElement.clientWidth}px`;
+    mirror.style.fontFamily = computed.fontFamily;
+    mirror.style.fontSize = computed.fontSize;
+    mirror.style.fontWeight = computed.fontWeight;
+    mirror.style.fontStyle = computed.fontStyle;
+    mirror.style.letterSpacing = computed.letterSpacing;
+    mirror.style.lineHeight = computed.lineHeight;
+    mirror.style.paddingLeft = computed.paddingLeft;
+    mirror.style.paddingRight = computed.paddingRight;
+    mirror.style.paddingTop = computed.paddingTop;
+    mirror.style.paddingBottom = computed.paddingBottom;
+    mirror.style.borderLeftWidth = computed.borderLeftWidth;
+    mirror.style.borderRightWidth = computed.borderRightWidth;
+    mirror.style.borderTopWidth = computed.borderTopWidth;
+    mirror.style.borderBottomWidth = computed.borderBottomWidth;
+
+    const lineNumbers: string[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      mirror.textContent = lines[i] || ' ';
+      const wrappedHeight = mirror.getBoundingClientRect().height || lineHeight;
+      const wrappedLines = Math.max(1, Math.ceil(wrappedHeight / lineHeight));
+
+      for (let wrapIndex = 0; wrapIndex < wrappedLines; wrapIndex++) {
+        lineNumbers.push(wrapIndex === 0 ? String(i + 1) : '&nbsp;');
+      }
+    }
+
+    this.lineNumbersDiv.innerHTML = lineNumbers
+      .map((value, index) => `<div class="line-number-row${value === '&nbsp;' ? ' line-number-empty' : ''}">${value}</div>`)
+      .join('');
+  }
+
+  destroy(): void {
+    if (this.resizeRafId !== null) {
+      cancelAnimationFrame(this.resizeRafId);
+      this.resizeRafId = null;
+    }
+
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
   }
 
   /**

@@ -18,6 +18,7 @@ A Domain-Specific Language (DSL) for defining and validating quality attributes 
 This DSL allows you to define quality attributes for systems using ISO 25010 categories, specify stimulus-response scenarios for quality requirements, validate semantic correctness and ISO 25010 compliance, and generate structured representations of quality specifications.
 
 The system is built with TypeScript and provides:
+
 - Complete ISO 25010 Support: All 8 main categories with valid subcategories
 - Semantic Validation: Ensures required fields and correct category usage
 - Extensible Grammar: Clean, readable syntax for quality specifications
@@ -39,21 +40,21 @@ cd qify
 ### Programmatic Usage
 
 ```typescript
-import { DSLParser } from './src/core/domain/dsl/services/DSLParser';
-import { ErrorHandler } from './src/core/shared/utils/error-handler';
+import { DSLParser } from "./src/core/domain/dsl/services/DSLParser";
+import { ErrorHandler } from "./src/core/shared/utils/error-handler";
 
 // Parse DSL text
 const dslText = `
 system Ecommerce
 
 attribute PerformanceCheckout {
-  artifact: "CheckoutService"
-  category: PerformanceEfficiency.TimeBehavior
+  artifact: "CheckoutService",
+  category: PerformanceEfficiency.TimeBehaviour,
   
-  source: "external user"
-  stimulus: "1000 concurrent users"
-  environment: "peak hours"
-  response: "response time < 2s"
+  source: "external user",
+  stimulus: "1000 concurrent users",
+  environment: "peak hours",
+  response: "response time < 2s",
   measure: "latency percentile p95"
 }
 `;
@@ -62,10 +63,10 @@ const parser = new DSLParser();
 const result = parser.parseDSL(dslText);
 
 if (result.errors.length > 0) {
-    console.log("Parse errors:", result.errors);
+  console.log("Parse errors:", result.errors);
 } else {
-    console.log("Valid DSL!");
-    console.log("Program:", result.program);
+  console.log("Valid DSL!");
+  console.log("Program:", result.program);
 }
 ```
 
@@ -77,8 +78,8 @@ The main parser class for processing DSL text.
 
 ```typescript
 class DSLParser {
-  parseDSL(dslText: string): ParseResult
-  validateProgram(program: DSLProgram): ValidationResult
+  parseDSL(dslText: string): ParseResult;
+  validateProgram(program: DSLProgram): ValidationResult;
 }
 ```
 
@@ -88,8 +89,12 @@ Centralized error handling utility.
 
 ```typescript
 class ErrorHandler {
-  handleError(error: Error | string, context: ErrorContext, options?: ErrorOptions): AppError
-  getErrorStats(): ErrorStats
+  handleError(
+    error: Error | string,
+    context: ErrorContext,
+    options?: ErrorOptions,
+  ): AppError;
+  getErrorStats(): ErrorStats;
 }
 ```
 
@@ -99,11 +104,11 @@ Structured logging utility.
 
 ```typescript
 class Logger {
-  debug(category: string, message: string, data?: unknown): void
-  info(category: string, message: string, data?: unknown): void
-  warn(category: string, message: string, data?: unknown): void
-  error(category: string, message: string, error?: Error, data?: unknown): void
-  fatal(category: string, message: string, error?: Error, data?: unknown): void
+  debug(category: string, message: string, data?: unknown): void;
+  info(category: string, message: string, data?: unknown): void;
+  warn(category: string, message: string, data?: unknown): void;
+  error(category: string, message: string, error?: Error, data?: unknown): void;
+  fatal(category: string, message: string, error?: Error, data?: unknown): void;
 }
 ```
 
@@ -115,13 +120,13 @@ class Logger {
 system Ecommerce
 
 attribute PerformanceCheckout {
-  artifact: "CheckoutService"
-  category: PerformanceEfficiency.TimeBehavior
-  
-  source: "external user"
-  stimulus: "1000 concurrent users"
-  environment: "peak hours"
-  response: "response time < 2s"
+  artifact: "CheckoutService",
+  category: PerformanceEfficiency.TimeBehaviour,
+
+  source: "external user",
+  stimulus: "1000 concurrent users",
+  environment: "peak hours",
+  response: "response time < 2s",
   measure: "latency percentile p95"
 }
 ```
@@ -132,24 +137,24 @@ attribute PerformanceCheckout {
 system Ecommerce
 
 attribute PerformanceCheckout {
-  artifact: "CheckoutService"
-  category: PerformanceEfficiency.TimeBehavior
-  
-  source: "external user"
-  stimulus: "1000 concurrent users"
-  environment: "peak hours"
-  response: "response time < 2s"
+  artifact: "CheckoutService",
+  category: PerformanceEfficiency.TimeBehaviour,
+
+  source: "external user",
+  stimulus: "1000 concurrent users",
+  environment: "peak hours",
+  response: "response time < 2s",
   measure: "latency percentile p95"
 }
 
 attribute AvailabilityPayments {
-  artifact: "PaymentGateway"
-  category: Reliability.Availability
-  
-  source: "system monitoring"
-  stimulus: "server failure"
-  environment: "production"
-  response: "failover in < 5s"
+  artifact: "PaymentGateway",
+  category: Reliability.Availability,
+
+  source: "system monitoring",
+  stimulus: "server failure",
+  environment: "production",
+  response: "failover in < 5s",
   measure: "downtime < 1%"
 }
 ```
@@ -157,20 +162,24 @@ attribute AvailabilityPayments {
 ### ISO 25010 Categories
 
 #### Functional Suitability
+
 - `FunctionalCompleteness` - Degree to which the set of functions covers all specified tasks
 - `FunctionalCorrectness` - Degree to which a product provides accurate results
 - `FunctionalAppropriateness` - Degree to which functions facilitate task completion
 
 #### Performance Efficiency
+
 - `TimeBehaviour` - Degree to which response time and throughput meet requirements
 - `ResourceUtilization` - Degree to which resource amounts and types meet requirements
 - `Capacity` - Degree to which maximum limits of parameters meet requirements
 
 #### Compatibility
+
 - `CoExistence` - Degree to which product performs efficiently while sharing environment
 - `Interoperability` - Degree to which system can exchange and use information
 
 #### Interaction Capability
+
 - `AppropriatenessRecognizability` - Degree to which users can recognize appropriateness
 - `Learnability` - Degree to which functions can be learned within specified time
 - `Operability` - Degree to which product has attributes that make it easy to operate
@@ -181,12 +190,14 @@ attribute AvailabilityPayments {
 - `SelfDescriptiveness` - Degree to which product presents appropriate information
 
 #### Reliability
+
 - `Faultlessness` - Degree to which system performs functions without fault
 - `Availability` - Degree to which system is operational and accessible when required
 - `FaultTolerance` - Degree to which system operates despite hardware/software faults
 - `Recoverability` - Degree to which system can recover data and re-establish desired state
 
 #### Security
+
 - `Confidentiality` - Degree to which data are accessible only to authorized users
 - `Integrity` - Degree to which system and data are protected from unauthorized modification
 - `NonRepudiation` - Degree to which actions can be proven to have taken place
@@ -195,6 +206,7 @@ attribute AvailabilityPayments {
 - `Resistance` - Degree to which product sustains operations while under attack
 
 #### Maintainability
+
 - `Modularity` - Degree to which system is composed of discrete components
 - `Reusability` - Degree to which product can be used in more than one system
 - `Analysability` - Degree to which impact of changes can be assessed effectively
@@ -202,12 +214,14 @@ attribute AvailabilityPayments {
 - `Testability` - Degree to which test criteria can be established and tests performed
 
 #### Flexibility
+
 - `Adaptability` - Degree to which product can be adapted to different environments
 - `Scalability` - Degree to which product can handle growing/shrinking workloads
 - `Installability` - Degree to which product can be successfully installed/uninstalled
 - `Replaceability` - Degree to which product can replace another for same purpose
 
 #### Safety
+
 - `OperationalConstraint` - Degree to which product constrains operation within safe parameters
 - `RiskIdentification` - Degree to which product can identify unacceptable risks
 - `FailSafe` - Degree to which product can place itself in safe operating mode

@@ -184,23 +184,70 @@ export class DSLParser {
     if (!this.consume('LBRACE', 'Expected \'{\'')) return null;
 
     const children: ASTNode[] = [];
-    
-    // Parse properties with error recovery
+    const requiredFields = {
+      artifact: false,
+      category: false,
+      source: false,
+      stimulus: false,
+      environment: false,
+      response: false,
+      measure: false
+    };
+
     while (!this.check('RBRACE') && !this.isAtEnd()) {
       if (this.match('KEYWORD_ARTIFACT')) {
         const artifactNode = this.parseArtifactDeclaration();
-        if (artifactNode) children.push(artifactNode);
+        if (artifactNode) {
+          children.push(artifactNode);
+          requiredFields.artifact = true;
+        }
+        this.consumeAttributeSeparator('artifact', this.previous().position);
       } else if (this.match('KEYWORD_CATEGORY')) {
         const categoryNode = this.parseCategoryDeclaration();
-        if (categoryNode) children.push(categoryNode);
+        if (categoryNode) {
+          children.push(categoryNode);
+          requiredFields.category = true;
+        }
+        this.consumeAttributeSeparator('category', this.previous().position);
       } else if (this.match('KEYWORD_SHOW_INFO')) {
         const showInfoNode = this.parseShowInfoDeclaration();
         if (showInfoNode) children.push(showInfoNode);
-      } else if (this.check('KEYWORD_SOURCE') || this.check('KEYWORD_STIMULUS') || 
-                 this.check('KEYWORD_ENVIRONMENT') || this.check('KEYWORD_RESPONSE') || 
-                 this.check('KEYWORD_MEASURE')) {
-        const scenarioNode = this.parseScenarioDeclaration();
-        if (scenarioNode) children.push(scenarioNode);
+        this.consumeAttributeSeparator('showInfo', this.previous().position);
+      } else if (this.match('KEYWORD_SOURCE')) {
+        const sourceNode = this.parseSourceDeclaration();
+        if (sourceNode) {
+          children.push(sourceNode);
+          requiredFields.source = true;
+        }
+        this.consumeAttributeSeparator('source', this.previous().position);
+      } else if (this.match('KEYWORD_STIMULUS')) {
+        const stimulusNode = this.parseStimulusDeclaration();
+        if (stimulusNode) {
+          children.push(stimulusNode);
+          requiredFields.stimulus = true;
+        }
+        this.consumeAttributeSeparator('stimulus', this.previous().position);
+      } else if (this.match('KEYWORD_ENVIRONMENT')) {
+        const environmentNode = this.parseEnvironmentDeclaration();
+        if (environmentNode) {
+          children.push(environmentNode);
+          requiredFields.environment = true;
+        }
+        this.consumeAttributeSeparator('environment', this.previous().position);
+      } else if (this.match('KEYWORD_RESPONSE')) {
+        const responseNode = this.parseResponseDeclaration();
+        if (responseNode) {
+          children.push(responseNode);
+          requiredFields.response = true;
+        }
+        this.consumeAttributeSeparator('response', this.previous().position);
+      } else if (this.match('KEYWORD_MEASURE')) {
+        const measureNode = this.parseMeasureDeclaration();
+        if (measureNode) {
+          children.push(measureNode);
+          requiredFields.measure = true;
+        }
+        this.consumeAttributeSeparator('measure', this.previous().position);
       } else if (this.check('WHITESPACE')) {
         this.advance();
       } else {
@@ -212,6 +259,18 @@ export class DSLParser {
 
     if (!this.consume('RBRACE', 'Expected \'}\'')) {
       // Sync to next block or EOF
+    }
+
+    const missingFields = Object.entries(requiredFields)
+      .filter(([, present]) => !present)
+      .map(([field]) => field);
+
+    if (missingFields.length > 0) {
+      missingFields.forEach(field => {
+        this.addError(`Missing required field '${field}' in attribute '${attributeIdentifier.value}'`, attributeIdentifier.position, 'error');
+      });
+
+      return null;
     }
 
     return {
@@ -227,11 +286,9 @@ export class DSLParser {
    */
   private parseArtifactDeclaration(): ASTNode | null {
     this.consume('COLON', 'Expected \':\'');
-    const stringToken = this.consume('STRING', 'Expected artifact name');
+    const stringToken = this.consumeQuotedString('artifact');
     
     if (!stringToken) return null;
-
-    this.match('COMMA');
 
     return {
       type: 'ArtifactDeclaration',
@@ -269,8 +326,6 @@ export class DSLParser {
       this.addError(`Invalid category '${categoryValue}'. Must be a valid ISO 25010 category.`, position, 'error');
     }
 
-    this.match('COMMA');
-
     return {
       type: 'CategoryDeclaration',
       position,
@@ -286,82 +341,38 @@ export class DSLParser {
     };
   }
 
-  /**
-   * Parse scenario declaration
-   * @returns ASTNode for scenario declaration
-   */
-  private parseScenarioDeclaration(): ASTNode | null {
-    const children: ASTNode[] = [];
-
-    const scenarioParts = [
-      ['KEYWORD_SOURCE', (): ASTNode | null => this.parseSourceDeclaration()],
-      ['KEYWORD_STIMULUS', (): ASTNode | null => this.parseStimulusDeclaration()],
-      ['KEYWORD_ENVIRONMENT', (): ASTNode | null => this.parseEnvironmentDeclaration()],
-      ['KEYWORD_RESPONSE', (): ASTNode | null => this.parseResponseDeclaration()],
-      ['KEYWORD_MEASURE', (): ASTNode | null => this.parseMeasureDeclaration()]
-    ] as const;
-
-    for (const [keyword, parseDeclaration] of scenarioParts) {
-      const scenarioNode = this.parseScenarioComponent(keyword, parseDeclaration);
-      if (scenarioNode) children.push(scenarioNode);
-    }
-
-    return {
-      type: 'ScenarioDeclaration',
-      position: children.length > 0 && children[0] ? children[0].position : 0,
-      children
-    };
-  }
-
-  private parseScenarioComponent(
-    keyword: TokenType,
-    parseDeclaration: () => ASTNode | null
-  ): ASTNode | null {
-    if (!this.match(keyword)) return null;
-
-    return parseDeclaration();
-  }
-
-  // Helper methods for parsing scenario components
   private parseSourceDeclaration(): ASTNode | null {
     this.consume('COLON', 'Expected \':\'');
-    const stringToken = this.consume('STRING', 'Expected source value');
-    this.match('COMMA');
+    const stringToken = this.consumeQuotedString('source');
     return this.createStringNode('SourceDeclaration', stringToken);
   }
 
   private parseStimulusDeclaration(): ASTNode | null {
     this.consume('COLON', 'Expected \':\'');
-    const stringToken = this.consume('STRING', 'Expected stimulus value');
-    this.match('COMMA');
+    const stringToken = this.consumeQuotedString('stimulus');
     return this.createStringNode('StimulusDeclaration', stringToken);
   }
 
   private parseEnvironmentDeclaration(): ASTNode | null {
     this.consume('COLON', 'Expected \':\'');
-    const stringToken = this.consume('STRING', 'Expected environment value');
-    this.match('COMMA');
+    const stringToken = this.consumeQuotedString('environment');
     return this.createStringNode('EnvironmentDeclaration', stringToken);
   }
 
   private parseResponseDeclaration(): ASTNode | null {
     this.consume('COLON', 'Expected \':\'');
-    const stringToken = this.consume('STRING', 'Expected response value');
-    this.match('COMMA');
+    const stringToken = this.consumeQuotedString('response');
     return this.createStringNode('ResponseDeclaration', stringToken);
   }
 
   private parseMeasureDeclaration(): ASTNode | null {
     this.consume('COLON', 'Expected \':\'');
-    const stringToken = this.consume('STRING', 'Expected measure value');
-    this.match('COMMA');
+    const stringToken = this.consumeQuotedString('measure');
     return this.createStringNode('MeasureDeclaration', stringToken);
   }
 
   private parseShowInfoDeclaration(): ASTNode | null {
     if (!this.match('COLON')) {
-      this.match('COMMA');
-
       return {
         type: 'ShowInfoDeclaration',
         position: this.previous().position,
@@ -378,7 +389,6 @@ export class DSLParser {
     }
 
     const booleanToken = this.consume('BOOLEAN', 'Expected true or false');
-    this.match('COMMA');
 
     if (!booleanToken) return null;
 
@@ -413,6 +423,27 @@ export class DSLParser {
     };
   }
 
+  private consumeQuotedString(context: string): Token | null {
+    if (this.check('STRING')) return this.advance();
+
+    const token = this.peek();
+    this.addError(`Expected double-quoted string for ${context}`, token.position, 'error');
+    return null;
+  }
+
+  private consumeAttributeSeparator(context: string, position: number): void {
+    if (this.match('COMMA')) {
+      if (this.check('RBRACE')) {
+        this.addError(`Trailing comma is not allowed after ${context}`, position, 'error');
+      }
+      return;
+    }
+
+    if (!this.check('RBRACE') && !this.isAtEnd()) {
+      this.addError(`Missing comma after ${context}`, this.peek().position, 'error');
+    }
+  }
+
   /**
    * Convert AST to Program object
    * @param ast The AST to convert
@@ -420,7 +451,7 @@ export class DSLParser {
    */
   private astToProgram(ast: ASTNode): DSLProgram {
     const program: DSLProgram = {
-      system: { name: '', attributes: [] },
+      system: { name: 'Untitled-1', attributes: [] },
       allAttributes: [],
       errors: []
     };
@@ -443,7 +474,7 @@ export class DSLParser {
   }
 
   private astToSystem(node: ASTNode): System {
-    let name = 'Default System';
+    let name = 'Untitled-1';
     if (node.children && node.children.length > 0) {
       const identifierNode = node.children[0];
       
@@ -504,6 +535,21 @@ export class DSLParser {
           break;
         case 'CategoryDeclaration':
           attribute.category = this.astToCategory(child);
+          break;
+        case 'SourceDeclaration':
+          attribute.scenario.source = this.astToStimulusSource(child);
+          break;
+        case 'StimulusDeclaration':
+          attribute.scenario.stimulus = this.astToStimulus(child);
+          break;
+        case 'EnvironmentDeclaration':
+          attribute.scenario.environment = this.astToEnvironment(child);
+          break;
+        case 'ResponseDeclaration':
+          attribute.scenario.response = this.astToResponse(child);
+          break;
+        case 'MeasureDeclaration':
+          attribute.scenario.measure = this.astToMeasure(child);
           break;
         case 'ScenarioDeclaration':
           attribute.scenario = this.astToScenario(child);
