@@ -1,112 +1,153 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Qify</title>
-  <link rel="icon" type="image/png" href="./img/qify-icon.png">
-  <script type="module" src="./src/main.ts"></script>
-  <!-- External CSS for better organization -->
-  <link rel="stylesheet" href="./css/styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qify</title>
+    <link rel="icon" type="image/png" href="./img/qify-icon.png">
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Lucide Icons via CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="./css/styles.css">
+    <script type="module" src="./src/main.ts"></script>
+    <meta name="turbo-visit-control" content="reload">
 </head>
 <body>
 
-<div class="header">
-  <img src="./img/qify-icon.png" alt="Qify Logo" class="logo" height="50">
-  <div style="display: flex; align-items: center; gap: 10px;">
-    <span id="status" class="status">Ready</span>
-    <button onclick="toggleExamples()">Examples ▼</button>
-    <a href="https://github.com/LePeanutButter/qify" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; color: var(--text); opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8" title="View on GitHub">
-      <svg height="24" width="24" viewBox="0 0 16 16" fill="currentColor">
-        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
-      </svg>
-    </a>
-  </div>
-</div>
+    <header class="header">
+        <div class="brand">
+            <img src="./img/qify-icon.png" alt="Qify" class="brand-logo">
+            <span class="brand-text">Qify Studio</span>
+            <div class="project-meta">
+                <div class="badge-status"></div>
+                <span id="status">main_cluster.qify</span>
+            </div>
+        </div>
+        <div class="top-actions">
+            <div class="dropdown-container examples-menu-wrap">
+                <button class="btn-dropdown-trigger" onclick="toggleExamples()" title="Examples">
+                    <i data-lucide="folder-open" style="width: 14px; height: 14px; color: var(--accent-cyan);"></i>
+                    <span>Examples</span>
+                    <i data-lucide="chevron-down" style="width: 12px; height: 12px; margin-left: 2px; color: var(--text-dark);"></i>
+                </button>
+                <div class="examples" id="examples">
+                    <button onclick="loadExample('basic')">Basic Example</button>
+                    <button onclick="loadExample('ecommerce')">E-commerce System</button>
+                    <button onclick="loadExample('healthcare')">Healthcare System</button>
+                    <button onclick="loadExample('iot')">IoT System</button>
+                </div>
+            </div>
+            <a class="btn-icon-top github-link" href="https://github.com/LePeanutButter/qify" target="_blank" rel="noopener noreferrer" title="View on GitHub">
+                <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                </svg>
+            </a>
+        </div>
+    </header>
 
-<div class="examples" id="examples">
-  <button onclick="loadExample('basic')">Basic Example</button>
-  <button onclick="loadExample('ecommerce')">E-commerce System</button>
-  <button onclick="loadExample('healthcare')">Healthcare System</button>
-  <button onclick="loadExample('iot')">IoT System</button>
-</div>
+    <div class="workspace">
 
-<div class="container">
-  <div class="editor code-editor">
-    <div class="editor-container">
-      <div id="lineNumbers" class="line-numbers"></div>
-      <div id="code" class="syntax-highlight" contenteditable="true" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off">system Ecommerce
+        <div class="left-panel">
+            <div class="editor-header">
+                <div class="tabs">
+                    <div class="tab active">
+                        <i data-lucide="file-code" class="tab-icon-cyan" style="width: 14px; height: 14px;"></i>
+                        <span id="fileName">Untitled-1.qify</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="editor-area">
+                <div id="lineNumbers" class="line-numbers">
+                  <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div>10</div>
+                </div>
+                <!-- keep id 'code' for existing logic -->
+                <div id="code" class="code-input syntax-highlight" contenteditable="true" spellcheck="false">
+system Ecommerce
 
 attribute PerformanceCheckout {
   artifact: "CheckoutService"
   category: PerformanceEfficiency.TimeBehaviour
-  
+
   source: "external user"
   stimulus: "1000 concurrent users"
   environment: "peak hours"
   response: "response time &lt; 2s"
   measure: "latency percentile p95"
-}</div>
-    </div>
+}
+                </div>
+            </div>
 
-    <div class="toolbar">
-      <button onclick="exportPNG()">Export PNG</button>
-      <button onclick="exportSVG()">Export SVG</button>
-      <button onclick="exportPDF()">Export PDF</button>
-      <button onclick="downloadCode()">Download .qify</button>
-      <button onclick="importCode()">Import .qify</button>
-      <input type="file" id="fileInput" accept=".qify" style="display: none;" onchange="handleFileImport(event)">
-    </div>
-    <div id="errorPanel" class="error-panel">
-      <div class="error-header">
-        <span>Errors</span>
-        <button onclick="copyErrors()" class="copy-button">Copy</button>
-      </div>
-      <div id="errorList" class="error-list"></div>
-    </div>
-  </div>
+            <div class="bottom-bar">
+                <div class="action-group">
+                    <button class="btn-action" onclick="exportPNG()"><i data-lucide="download" style="width: 14px; height: 14px;"></i>PNG</button>
+                    <button class="btn-action" onclick="exportPDF()"><i data-lucide="file-text" style="width: 14px; height: 14px;"></i>PDF</button>
+                    <button class="btn-action" onclick="exportSVG()"><i data-lucide="layers" style="width: 14px; height: 14px;"></i>SVG</button>
+                </div>
+                <div class="action-group">
+                    <button class="btn-action" onclick="importCode()"><i data-lucide="upload-cloud" style="width: 14px; height: 14px;"></i>Import .qify</button>
+                    <button class="btn-action primary" onclick="downloadCode()"><i data-lucide="save" style="width: 14px; height: 14px;"></i>Export .qify</button>
+                    <input type="file" id="fileInput" accept=".qify" style="display:none" onchange="handleFileImport(event)">
+                </div>
+            </div>
+        </div>
 
-  <div class="preview">
-    <section class="visualization-pane" aria-label="Visualizador">
-      <div id="visualization" class="visualization"></div>
-    </section>
-    <section class="readme-panel" aria-label="Documentación de uso">
-      <div class="readme-content">
-        <h1>Qify</h1>
-        <p class="readme-lead">DSL visual para documentar atributos de calidad de software basados en ISO 25010.</p>
+        <div class="right-panel">
+            <div class="canvas-area">
+                <div id="visualization" class="visualization">
+                    <div class="canvas-placeholder-node">
+                        <div class="node-icon">
+                            <i data-lucide="cpu" style="width: 18px; height: 18px;"></i>
+                        </div>
+                        <div class="node-text">Awaiting Reactive Stream Graph</div>
+                    </div>
+                </div>
+            </div>
 
-        <h2>Cómo usar Qify</h2>
-        <p>Escribe o importa un archivo <code>.qify</code> en el editor de la izquierda. La vista superior derecha se actualiza automáticamente y muestra un diagrama SVG exportable por cada atributo definido.</p>
+            <div class="readme-panel">
+                <div class="readme-header">
+                    <span>DOCUMENTATION & OVERVIEW</span>
+                </div>
+                <div class="readme-content">
+                    <h1><i data-lucide="book-open" style="width: 16px; height: 16px; color: var(--accent-cyan);"></i> Qify</h1>
+                    <p class="readme-lead">DSL visual para documentar atributos de calidad de software basados en ISO 25010.</p>
 
-        <h2>Estructura básica</h2>
-        <pre><code>system Ecommerce
+                    <h2>Cómo usar Qify</h2>
+                    <p>Escribe o importa un archivo <code>.qify</code> en el editor de la izquierda. La vista superior derecha se actualiza automáticamente y muestra un diagrama SVG exportable por cada atributo definido.</p>
+
+                    <h2>Estructura básica</h2>
+                    <pre><code>system Ecommerce
 
 attribute PerformanceCheckout {
-  artifact: "CheckoutService",
-  category: PerformanceEfficiency.TimeBehaviour,
+  artifact: "CheckoutService"
+  category: PerformanceEfficiency.TimeBehaviour
 
-  source: "external user",
-  stimulus: "1000 concurrent users",
-  environment: "peak hours",
-  response: "response time &lt; 2s",
+  source: "external user"
+  stimulus: "1000 concurrent users"
+  environment: "peak hours"
+  response: "response time &lt; 2s"
   measure: "latency percentile p95"
 }</code></pre>
 
-        <h2>Campos del DSL</h2>
-        <ul>
-          <li><strong>system</strong>: nombre del sistema evaluado.</li>
-          <li><strong>attribute</strong>: nombre del atributo o requisito de calidad.</li>
-          <li><strong>artifact</strong>: componente, servicio o módulo afectado.</li>
-          <li><strong>category</strong>: categoría ISO 25010 usada para clasificar el atributo.</li>
-          <li><strong>source</strong>: origen del estímulo, como usuario, sistema externo o monitor.</li>
-          <li><strong>stimulus</strong>: evento o condición que dispara la respuesta.</li>
-          <li><strong>environment</strong>: contexto donde ocurre el estímulo.</li>
-          <li><strong>response</strong>: comportamiento esperado del sistema.</li>
-          <li><strong>measure</strong>: métrica verificable para validar el resultado.</li>
-        </ul>
+                    <h2>Campos del DSL</h2>
+                    <ul>
+                        <li><strong>system</strong>: nombre del sistema evaluado.</li>
+                        <li><strong>attribute</strong>: nombre del atributo o requisito de calidad.</li>
+                        <li><strong>artifact</strong>: componente, servicio o módulo afectado.</li>
+                        <li><strong>category</strong>: categoría ISO 25010 usada para clasificar el atributo.</li>
+                        <li><strong>source</strong>: origen del estímulo, como usuario, sistema externo o monitor.</li>
+                        <li><strong>stimulus</strong>: evento o condición que dispara la respuesta.</li>
+                        <li><strong>environment</strong>: contexto donde ocurre el estímulo.</li>
+                        <li><strong>response</strong>: comportamiento esperado del sistema.</li>
+                        <li><strong>measure</strong>: métrica verificable para validar el resultado.</li>
+                    </ul>
 
-        <h2>Caja de información</h2>
-        <p>La caja inferior del diagrama es opcional. Para mostrar sistema, atributo, categoría y fecha de modificación, agrega <code>showInfo</code> dentro del bloque <code>attribute</code>.</p>
-        <pre><code>attribute PerformanceCheckout {
+                    <h2>Caja de información</h2>
+                    <p>La caja inferior del diagrama es opcional. Para mostrar sistema, atributo, categoría y fecha de modificación, agrega <code>showInfo</code> dentro del bloque <code>attribute</code>.</p>
+                    <pre><code>attribute PerformanceCheckout {
   artifact: "CheckoutService",
   category: PerformanceEfficiency.TimeBehaviour,
   showInfo,
@@ -117,167 +158,114 @@ attribute PerformanceCheckout {
   response: "response time &lt; 2s",
   measure: "latency percentile p95"
 }</code></pre>
-        <p>También puedes usar <code>showInfo: true,</code>. Si no se agrega, la caja no se muestra. Con <code>showInfo: false,</code> queda oculta.</p>
+                    <p>También puedes usar <code>showInfo: true,</code>. Si no se agrega, la caja no se muestra. Con <code>showInfo: false,</code> queda oculta.</p>
 
-        <h2>Varios diagramas</h2>
-        <p>Si defines varios bloques <code>attribute</code>, Qify crea un diagrama por atributo. Usa los controles flotantes del visualizador para avanzar, retroceder, hacer zoom, alejar o restablecer la vista.</p>
+                    <h2>Varios diagramas</h2>
+                    <p>Si defines varios bloques <code>attribute</code>, Qify crea un diagrama por atributo. Usa los controles flotantes del visualizador para avanzar, retroceder, hacer zoom, alejar o restablecer la vista.</p>
 
-        <h2>Exportación</h2>
-        <ul>
-          <li><strong>Export PNG</strong>: descarga una imagen rasterizada del diagrama.</li>
-          <li><strong>Export SVG</strong>: descarga SVG puro sin <code>foreignObject</code>.</li>
-          <li><strong>Export PDF</strong>: convierte el SVG puro a PDF seleccionable directamente en el navegador.</li>
-          <li><strong>Download .qify</strong>: guarda el texto actual del editor.</li>
-          <li><strong>Import .qify</strong>: carga un archivo DSL existente.</li>
-        </ul>
+                    <h2>Exportación</h2>
+                    <ul>
+                        <li><strong>Export PNG</strong>: descarga una imagen rasterizada del diagrama.</li>
+                        <li><strong>Export SVG</strong>: descarga SVG puro sin <code>foreignObject</code>.</li>
+                        <li><strong>Export PDF</strong>: convierte el SVG puro a PDF seleccionable directamente en el navegador.</li>
+                        <li><strong>Download .qify</strong>: guarda el texto actual del editor.</li>
+                        <li><strong>Import .qify</strong>: carga un archivo DSL existente.</li>
+                    </ul>
 
-        <h2>Categorías soportadas</h2>
-        <p>Incluye familias ISO 25010 como <code>FunctionalSuitability</code>, <code>PerformanceEfficiency</code>, <code>Compatibility</code>, <code>InteractionCapability</code>, <code>Reliability</code>, <code>Security</code>, <code>Maintainability</code>, <code>Flexibility</code> y <code>Safety</code>.</p>
+                    <h2>Categorías soportadas</h2>
+                    <p>Incluye familias ISO 25010 como <code>FunctionalSuitability</code>, <code>PerformanceEfficiency</code>, <code>Compatibility</code>, <code>InteractionCapability</code>, <code>Reliability</code>, <code>Security</code>, <code>Maintainability</code>, <code>Flexibility</code> y <code>Safety</code>.</p>
 
-        <h2>Licencia y desarrollador</h2>
-        <p><strong>Licencia:</strong> GPL-3.0 license.</p>
-        <p><strong>Desarrollador:</strong>
-        <a
-          href="https://github.com/LePeanutButter"
-          target="_blank" rel="noopener noreferrer"
-          style="color: #cccccc;">
-          LePeanutButter.
-        </a>
-        </p>
+                    <h2>Licencia y desarrollador</h2>
+                    <p><strong>Licencia:</strong> GPL-3.0 license.</p>
+                    <p><strong>Desarrollador:</strong>
+                    <a href="https://github.com/LePeanutButter" target="_blank" rel="noopener noreferrer" style="color: #cccccc;">LePeanutButter.</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error panel kept but positioned by CSS -->
+    <div id="errorPanel" class="error-panel">
+      <div class="error-header">
+        <span>Errors</span>
+        <button onclick="copyErrors()" class="copy-button">Copy</button>
       </div>
-    </section>
-    <canvas id="canvas" width="800" height="600"></canvas>
-  </div>
-</div>
+      <div id="errorList" class="error-list"></div>
+    </div>
 
-</body>
-<script>
-  document.addEventListener('contextmenu', function(e) {
-    e.preventDefault();
-  });
+    <canvas id="canvas" width="800" height="600" style="display:none"></canvas>
 
-  document.addEventListener('dragstart', function(e) {
-    if (e.target.tagName === 'IMG') {
-      e.preventDefault();
-    }
-  });
+    <script>
+        // Initialize icons
+        lucide.createIcons();
+    </script>
 
-  // Canvas dragging functionality
-  let isDragging = false;
-  let startX, startY;
-  let currentX = 0, currentY = 0;
-  let currentScale = 1;
+    <script>
+  document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+  document.addEventListener('dragstart', function(e) { if (e.target.tagName === 'IMG') e.preventDefault(); });
 
+  let isDragging = false; let startX, startY; let currentX = 0, currentY = 0; let currentScale = 1;
+    let suppressDiagramTransition = false;
   const visualization = document.getElementById('visualization');
 
-  function updateZoomInput() {
-    const input = document.getElementById('zoomInput');
-    if (input) {
-      input.value = Math.round(currentScale * 100) + '%';
+    function getFitSize(diagramTemplate) {
+        if (!diagramTemplate) return { width: 706, height: 310 };
+        const viewBox = diagramTemplate.viewBox && diagramTemplate.viewBox.baseVal;
+        const width = parseFloat(diagramTemplate.getAttribute('data-fit-width') || '') || viewBox?.width || parseFloat(diagramTemplate.getAttribute('width')) || 706;
+        const height = parseFloat(diagramTemplate.getAttribute('data-fit-height') || '') || viewBox?.height || parseFloat(diagramTemplate.getAttribute('height')) || 310;
+        return { width, height };
     }
-  }
+
+    function updateZoomInput() {
+        const input = document.getElementById('zoomInput');
+        const label = input?.querySelector('.zoom-pill-text');
+        if (label) label.textContent = Math.round(currentScale * 100) + '%';
+    }
 
   function applyDiagramTransform() {
-    const diagramTemplate = visualization.querySelector('.diagram-template');
-    if (diagramTemplate) {
-      const visRect = visualization.getBoundingClientRect();
-      const svgWidth = (parseFloat(diagramTemplate.getAttribute('width')) || 706) * currentScale;
-      const svgHeight = (parseFloat(diagramTemplate.getAttribute('height')) || 310) * currentScale;
-      
-      const marginX = visRect.width * 0.4;
-      const marginY = visRect.height * 0.4;
-      
-      // Calculate boundaries allowing it to move until almost out of view
-      const maxX = (visRect.width / 2) + (svgWidth / 2) - marginX;
-      const minX = -maxX;
-      
-      const maxY = (visRect.height / 2) + (svgHeight / 2) - marginY;
-      const minY = -maxY;
-      
-      // Allow centering if it's smaller
-      currentX = Math.max(minX, Math.min(maxX, currentX));
-      currentY = Math.max(minY, Math.min(maxY, currentY));
-      
-      diagramTemplate.style.transformOrigin = 'center';
-      diagramTemplate.style.position = 'absolute';
-      diagramTemplate.style.left = '50%';
-      diagramTemplate.style.top = '50%';
-      diagramTemplate.style.margin = '0';
-
-      diagramTemplate.style.transform = `translate(-50%, -50%) translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
-      updateZoomInput();
-    }
+    const diagramTemplate = visualization && visualization.querySelector('.diagram-template');
+    if (!diagramTemplate) return;
+    const visRect = visualization.getBoundingClientRect();
+        const fitSize = getFitSize(diagramTemplate);
+        const svgWidth = fitSize.width * currentScale;
+        const svgHeight = fitSize.height * currentScale;
+    const marginX = visRect.width * 0.4; const marginY = visRect.height * 0.4;
+    const maxX = (visRect.width / 2) + (svgWidth / 2) - marginX; const minX = -maxX;
+    const maxY = (visRect.height / 2) + (svgHeight / 2) - marginY; const minY = -maxY;
+    currentX = Math.max(minX, Math.min(maxX, currentX)); currentY = Math.max(minY, Math.min(maxY, currentY));
+        diagramTemplate.style.transition = (isDragging || suppressDiagramTransition) ? 'none' : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)';
+    diagramTemplate.style.transformOrigin = 'center'; diagramTemplate.style.position = 'absolute';
+    diagramTemplate.style.left = '50%'; diagramTemplate.style.top = '50%'; diagramTemplate.style.margin = '0';
+    diagramTemplate.style.transform = `translate(-50%, -50%) translate(${currentX}px, ${currentY}px) scale(${currentScale})`;
+    updateZoomInput();
   }
 
-  function clampZoom(value) {
-    return Math.max(0.1, Math.min(5.0, value));
-  }
-
-  window.zoomDiagram = function(factor) {
-    currentScale = clampZoom(currentScale * factor);
-    applyDiagramTransform();
-  };
-
-  window.setDiagramZoom = function(scale) {
-    currentScale = clampZoom(scale);
-    applyDiagramTransform();
-  };
-
-  window.resetDiagramZoom = function() {
-    const diagramTemplate = visualization.querySelector('.diagram-template');
-    if (diagramTemplate) {
-      const visRect = visualization.getBoundingClientRect();
-      const svgWidth = parseFloat(diagramTemplate.getAttribute('width')) || 706;
-      const svgHeight = parseFloat(diagramTemplate.getAttribute('height')) || 310;
-      
-      // Calculate scale to fit inside container with 20px padding
-      const scaleX = (visRect.width - 40) / svgWidth;
-      const scaleY = (visRect.height - 40) / svgHeight;
-      currentScale = Math.min(scaleX, scaleY);
-      currentScale = clampZoom(currentScale);
-      
-      // Perfectly center
-      currentX = 0;
-      currentY = 0;
-      
+  function clampZoom(value) { return Math.max(0.1, Math.min(5.0, value)); }
+  window.zoomDiagram = function(factor) { currentScale = clampZoom(currentScale * factor); applyDiagramTransform(); };
+  window.setDiagramZoom = function(scale) { currentScale = clampZoom(scale); applyDiagramTransform(); };
+  window.resetDiagramZoom = function(animate = true) {
+    const diagramTemplate = visualization && visualization.querySelector('.diagram-template'); if (!diagramTemplate) return;
+        currentScale = 1;
+        currentX = 0;
+        currentY = 0;
+      suppressDiagramTransition = !animate;
+      diagramTemplate.style.transition = animate ? 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)' : 'none';
       applyDiagramTransform();
-    }
+      suppressDiagramTransition = false;
   };
-  
-  visualization.addEventListener('mousedown', function(e) {
-    // Only start dragging with left mouse button
+
+  visualization && visualization.addEventListener('mousedown', function(e) {
     if (e.button === 0 && !e.target.closest('.canvas-controls')) {
-      isDragging = true;
-      startX = e.pageX - currentX;
-      startY = e.pageY - currentY;
-      visualization.style.cursor = 'grabbing';
-      visualization.style.userSelect = 'none';
-      e.preventDefault();
+      isDragging = true; startX = e.pageX - currentX; startY = e.pageY - currentY; visualization.style.cursor = 'grabbing'; visualization.style.userSelect = 'none'; e.preventDefault();
     }
   });
 
-  document.addEventListener('mousemove', function(e) {
-    if (!isDragging) return;
-    
-    e.preventDefault();
-    currentX = e.pageX - startX;
-    currentY = e.pageY - startY;
-    applyDiagramTransform();
-  });
+  document.addEventListener('mousemove', function(e) { if (!isDragging) return; e.preventDefault(); currentX = e.pageX - startX; currentY = e.pageY - startY; applyDiagramTransform(); });
+  document.addEventListener('mouseup', function() { if (isDragging) { isDragging = false; visualization.style.cursor = 'grab'; visualization.style.userSelect = 'auto'; } });
+  visualization && visualization.addEventListener('selectstart', function(e) { if (isDragging) e.preventDefault(); });
 
-  document.addEventListener('mouseup', function() {
-    if (isDragging) {
-      isDragging = false;
-      visualization.style.cursor = 'grab';
-      visualization.style.userSelect = 'auto';
-    }
-  });
+    </script>
 
-  // Prevent text selection while dragging
-  visualization.addEventListener('selectstart', function(e) {
-    if (isDragging) {
-      e.preventDefault();
-    }
-  });
-</script>
+</body>
 </html>

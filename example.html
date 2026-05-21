@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qify IDE — Premium Studio</title>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Lucide Icons via CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            /* Palette based on description: deep dark blue, cyan accent, system colors */
+            --bg-main: #060913;
+            --bg-sidebar: #0b1120;
+            --bg-panel: #0f172a;
+            --bg-surface: #1e293b;
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-focus: rgba(6, 182, 212, 0.4);
+            
+            --accent-cyan: #06b6d4;
+            --accent-blue: #3b82f6;
+            --brand-purple: #8b5cf6;
+            --system-green: #10b981;
+            --system-orange: #f97316;
+            --system-red: #ef4444;
+            
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dark: #64748b;
+            
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Top Navigation Bar */
+        header {
+            height: 48px;
+            background-color: var(--bg-sidebar);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 100; /* Incrementado para superponer el menú */
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-mark {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--brand-purple));
+            border-radius: 6px;
+            position: relative;
+            box-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
+        }
+
+        .logo-mark::after {
+            content: '';
+            position: absolute;
+            inset: 5px;
+            background-color: var(--bg-sidebar);
+            border-radius: 3px;
+        }
+
+        .brand span {
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            background: linear-gradient(to right, var(--text-main), var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .project-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: rgba(255, 255, 255, 0.03);
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border-subtle);
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .badge-status {
+            width: 6px;
+            height: 6px;
+            background-color: var(--system-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--system-green);
+        }
+
+        /* NUEVO: Estructura y Estilos del Dropdown Examples */
+        .dropdown-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .btn-dropdown-trigger {
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            font-size: 13px;
+            font-weight: 500;
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-dropdown-trigger:hover, .btn-dropdown-trigger.active {
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent-cyan);
+        }
+
+        /* Contenedor Examples adaptado a tu estructura */
+        .examples {
+            display: none; /* Oculto por defecto */
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            background-color: #0f172a; /* var(--bg-panel) */
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            min-width: 180px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.1);
+            padding: 4px;
+            z-index: 1000;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        /* Clase show activa el despliegue */
+        .examples.show {
+            display: flex;
+        }
+
+        .examples button {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: var(--font-sans);
+            font-size: 12px;
+            text-align: left;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.15s ease;
+        }
+
+        .examples button:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            padding-left: 15px; /* Efecto sutil de desplazamiento */
+        }
+
+        /* Workspace & Layout */
+        .workspace {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 55% 45%;
+            height: calc(100vh - 48px);
+            position: relative;
+        }
+
+        /* Left Section: Editor + Action Bar */
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-subtle);
+            background-color: var(--bg-sidebar);
+        }
+
+        .editor-header {
+            height: 40px;
+            background-color: rgba(0, 0, 0, 0.15);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            justify-content: space-between;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+        }
+
+        .tab {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--text-dark);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab.active {
+            background-color: rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .tab-icon-cyan { color: var(--accent-cyan); }
+
+        .editor-area {
+            flex: 1;
+            display: flex;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.6;
+            padding: 16px 0;
+            overflow-y: auto;
+            background-color: rgba(6, 9, 19, 0.4);
+        }
+
+        .line-numbers {
+            width: 48px;
+            text-align: right;
+            padding-right: 16px;
+            color: rgba(255, 255, 255, 0.15);
+            user-select: none;
+        }
+
+        .code-input {
+            flex: 1;
+            background: none;
+            border: none;
+            outline: none;
+            color: #cbd5e1;
+            resize: none;
+            white-space: pre;
+            font-family: inherit;
+            font-size: inherit;
+            line-height: inherit;
+            padding-left: 4px;
+        }
+
+        /* Code Highlight */
+        .keyword { color: var(--brand-purple); font-weight: 500; }
+        .function { color: var(--accent-blue); }
+        .string { color: var(--system-green); }
+        .comment { color: var(--text-dark); font-style: italic; }
+        .variable { color: var(--accent-cyan); }
+        .number { color: var(--system-orange); }
+
+        /* Bottom Control Panel */
+        .bottom-bar {
+            height: 56px;
+            background-color: var(--bg-panel);
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+        }
+
+        .action-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-action {
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-muted);
+            font-family: var(--font-sans);
+            font-size: 12px;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .btn-action:hover {
+            background-color: rgba(255, 255, 255, 0.07);
+            color: var(--text-main);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .btn-action.primary {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(59, 130, 246, 0.15));
+            border-color: rgba(6, 182, 212, 0.3);
+            color: var(--accent-cyan);
+        }
+
+        .btn-action.primary:hover {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(59, 130, 246, 0.25));
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 12px rgba(6, 182, 212, 0.15);
+        }
+
+        /* Right Section */
+        .right-panel {
+            display: grid;
+            grid-template-rows: 55% 45%;
+            background-color: var(--bg-main);
+        }
+
+        /* Upper Right: Canvas Area - Blanco */
+        .canvas-area {
+            position: relative;
+            background-color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .canvas-header {
+            position: absolute;
+            top: 12px;
+            left: 16px;
+            right: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .canvas-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #475569;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .canvas-pulse {
+            width: 6px;
+            height: 6px;
+            background-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: pulse-glow 2s infinite;
+        }
+
+        @keyframes pulse-glow {
+            0% { transform: scale(0.9); opacity: 0.4; }
+            50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 8px var(--accent-cyan); }
+            100% { transform: scale(0.9); opacity: 0.4; }
+        }
+
+        /* Controles Flotantes del Canvas */
+        .canvas-controls {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .btn-canvas-ctrl {
+            background-color: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.2s ease;
+        }
+
+        .btn-canvas-ctrl:hover {
+            color: #ffffff;
+            background-color: #1e293b;
+            border-color: var(--accent-cyan);
+            transform: translateY(-1px);
+        }
+
+        .canvas-nav-group {
+            display: flex;
+            background-color: #0f172a;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+
+        .btn-canvas-nav {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            padding: 6px 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .btn-canvas-nav:hover {
+            color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        .btn-canvas-nav:first-child {
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .canvas-placeholder-node {
+            width: 240px;
+            height: 140px;
+            background: #0f172a;
+            border: 1px dashed rgba(6, 182, 212, 0.5);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.3);
+        }
+
+        .node-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--accent-cyan);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(6, 182, 212, 0.2);
+        }
+
+        .node-text {
+            font-size: 11px;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        /* Lower Right: Documentation */
+        .readme-panel {
+            background-color: var(--bg-panel);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .readme-header {
+            height: 36px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .readme-header span {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        .readme-content {
+            padding: 24px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #cbd5e1;
+        }
+
+        .readme-content h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .readme-content p {
+            margin-bottom: 14px;
+            color: var(--text-muted);
+        }
+
+        .readme-content ul {
+            margin-left: 18px;
+            margin-bottom: 14px;
+            color: var(--text-muted);
+        }
+
+        .readme-content li {
+            margin-bottom: 4px;
+        }
+
+        .code-inline {
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--accent-cyan);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .doc-note {
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.05), transparent);
+            border-left: 3px solid var(--brand-purple);
+            padding: 10px 14px;
+            border-radius: 0 8px 8px 0;
+            margin-top: 16px;
+            font-size: 12px;
+        }
+
+        /* Custom Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header>
+        <div class="brand">
+            <div class="logo-mark"></div>
+            <span>Qify Studio</span>
+            <div class="project-meta">
+                <div class="badge-status"></div>
+                <span>main_cluster.qify</span>
+            </div>
+        </div>
+        
+        <!-- MODIFICADO: Reemplazo de lupa, filtro y user por el Dropdown Examples -->
+        <div class="top-actions">
+            <div class="dropdown-container">
+                <button class="btn-dropdown-trigger" id="dropdownBtn">
+                    <i data-lucide="folder-open" style="width: 14px; height: 14px; color: var(--accent-cyan);"></i>
+                    <span>Examples</span>
+                    <i data-lucide="chevron-down" style="width: 12px; height: 12px; margin-left: 2px; color: var(--text-dark);"></i>
+                </button>
+                
+                <!-- Tu HTML original integrado con estilos dinámicos -->
+                <div class="examples" id="examples">
+                    <button onclick="loadExample('basic')">Basic Example</button>
+                    <button onclick="loadExample('ecommerce')">E-commerce System</button>
+                    <button onclick="loadExample('healthcare')">Healthcare System</button>
+                    <button onclick="loadExample('iot')">IoT System</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- App Shell Workspace -->
+    <div class="workspace">
+        
+        <!-- Left Window Container -->
+        <div class="left-panel">
+            <div class="editor-header">
+                <div class="tabs">
+                    <div class="tab active">
+                        <i data-lucide="file-code" class="tab-icon-cyan" style="width: 14px; height: 14px;"></i>
+                        <span>pipeline.qify</span>
+                    </div>
+                    <div class="tab">
+                        <i data-lucide="settings" style="width: 14px; height: 14px;"></i>
+                        <span>config.json</span>
+                    </div>
+                </div>
+                <div>
+                    <i data-lucide="more-horizontal" class="btn-icon-top" style="width: 16px; height: 16px; cursor:pointer;"></i>
+                </div>
+            </div>
+
+            <!-- Fake Code Matrix Editor View -->
+            <div class="editor-area">
+                <div class="line-numbers">
+                    <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div>10</div><div>11</div><div>12</div><div>13</div>
+                </div>
+                <div class="code-input" contenteditable="true" spellcheck="false"><span class="comment">// Rediseño de Configuración de Flujo Qify Premium</span>
+<span class="keyword">import</span> { computeNode, Matrix } <span class="keyword">from</span> <span class="string">"@qify/core"</span>;
+
+<span class="keyword">const</span> <span class="variable">session</span> = <span class="keyword">new</span> <span class="function">Matrix</span>({
+    id: <span class="string">"usr_0x99a2"</span>,
+    secureMode: <span class="number">true</span>,
+    gradientBalance: <span class="number">0.85</span>
+});
+
+// Renderizado de geometría procedimental
+<span class="keyword">export async function</span> <span class="function">initPipeline</span>(<span class="variable">context</span>) {
+    <span class="keyword">return await</span> <span class="variable">session</span>.<span class="function">pipe</span>(<span class="variable">context</span>).<span class="function">map</span>(<span class="variable">node</span> => <span class="variable">node</span>.ratio * <span class="number">2</span>);
+}</div>
+            </div>
+
+            <!-- Interactive Blueprint Action Hub Bar -->
+            <div class="bottom-bar">
+                <div class="action-group">
+                    <button class="btn-action"><i data-lucide="download" style="width: 14px; height: 14px;"></i>PNG</button>
+                    <button class="btn-action"><i data-lucide="file-text" style="width: 14px; height: 14px;"></i>PDF</button>
+                    <button class="btn-action"><i data-lucide="layers" style="width: 14px; height: 14px;"></i>SVG</button>
+                </div>
+                <div class="action-group">
+                    <button class="btn-action"><i data-lucide="upload-cloud" style="width: 14px; height: 14px;"></i>Import .qify</button>
+                    <button class="btn-action primary"><i data-lucide="save" style="width: 14px; height: 14px;"></i>Export .qify</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Window Container -->
+        <div class="right-panel">
+            
+            <!-- Matrix Engine Canvas / Completamente Blanco -->
+            <div class="canvas-area">
+                <div class="canvas-header">
+                    <div class="canvas-title">
+                        <div class="canvas-pulse"></div>
+                        <span>Live Vector Viewport</span>
+                    </div>
+                </div>
+
+                <!-- Controles Flotantes del Canvas -->
+                <div class="canvas-controls">
+                    <button class="btn-canvas-ctrl">
+                        <i data-lucide="zoom-in" style="width: 13px; height: 13px;"></i>
+                        <span>100%</span>
+                    </button>
+                    <div class="canvas-nav-group">
+                        <button class="btn-canvas-nav" title="Canva Anterior">
+                            <i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i>
+                        </button>
+                        <button class="btn-canvas-nav" title="Siguiente Canva">
+                            <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Minimal Vector Canvas Element Representation -->
+                <div class="canvas-placeholder-node">
+                    <div class="node-icon">
+                        <i data-lucide="cpu" style="width: 18px; height: 18px;"></i>
+                    </div>
+                    <div class="node-text">Awaiting Reactive Stream Graph</div>
+                </div>
+            </div>
+
+            <!-- Readme Markdown Interactive Engine Panel -->
+            <div class="readme-panel">
+                <div class="readme-header">
+                    <span>Documentation & Overview</span>
+                </div>
+                <div class="readme-content">
+                    <h1><i data-lucide="book-open" style="width: 16px; height: 16px; color: var(--accent-cyan);"></i> Comenzando con Qify</h1>
+                    <p>Bienvenido al entorno de desarrollo integrado avanzado de <strong>Qify</strong>. Este ecosistema modular combina la edición declarativa de código con renderizado vectorial optimizado por hardware en tiempo real.</p>
+                    
+                    <ul>
+                        <li><span class="code-inline">pipeline.qify</span> define los nodos de la estructura lógica principal.</li>
+                        <li>Los botones inferiores permiten exportar recursos listos para producción.</li>
+                        <li>El motor gráfico soporta aceleración completa y esquemas dinámicos.</li>
+                    </ul>
+
+                    <div class="doc-note">
+                        <span style="color: var(--brand-purple); font-weight: 600; display: block; margin-bottom: 2px;">Tip de Pro</span>
+                        Puedes editar el código directamente en el panel izquierdo para observar cómo cambia analíticamente la estructura sintáctica del lienzo superior.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Script de Interactividad -->
+    <script>
+        // Inicializar Iconos Lucide
+        lucide.createIcons();
+
+        // Control Lógico del Dropdown Examples
+        const dropdownBtn = document.getElementById('dropdownBtn');
+        const examplesMenu = document.getElementById('examples');
+
+        // Alternar menú al hacer click en el botón
+        dropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            examplesMenu.classList.toggle('show');
+            dropdownBtn.classList.toggle('active');
+        });
+
+        // Cerrar el menú si se hace click fuera de él
+        document.addEventListener('click', () => {
+            if (examplesMenu.classList.contains('show')) {
+                examplesMenu.classList.remove('show');
+                dropdownBtn.classList.remove('active');
+            }
+        });
+
+        // Función que se ejecuta al seleccionar una opción
+        function loadExample(type) {
+            console.log("Cargando ejemplo:", type);
+            // Aquí puedes añadir la lógica que desees para actualizar el editor o canvas.
+        }
+    </script>
+</body>
+</html>

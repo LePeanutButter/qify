@@ -179,6 +179,7 @@ export class EditorManager {
     // 1. Validate DSL first to get latest errors
     const parseResult = DSLParser.parseDSL(text);
     const errors = parseResult.errors || [];
+    this.updateFileName(text);
 
     // 2. Update syntax highlighting with error info
     this.codeElement.innerHTML = SyntaxHighlighter.highlight(text, errors);
@@ -355,6 +356,7 @@ export class EditorManager {
       this.history = [{ text, caretPos: 0 }];
       this.historyIndex = 0;
       this.handleCodeInput(true);
+      this.examplesDiv?.classList.remove('show');
     }
   }
 
@@ -363,5 +365,13 @@ export class EditorManager {
    */
   toggleExamples(): void {
     this.examplesDiv?.classList.toggle('show');
+  }
+
+  private updateFileName(text: string): void {
+    const fileNameElement = document.getElementById('fileName');
+    if (!fileNameElement) return;
+
+    const match = /\bsystem\s+([A-Za-z_][A-Za-z0-9_]*)/i.exec(text);
+    fileNameElement.textContent = `${match?.[1] ?? 'Untitled-1'}.qify`;
   }
 }

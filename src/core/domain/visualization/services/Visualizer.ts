@@ -170,7 +170,7 @@ export class DSLVisualizer {
       
       // Auto-fit diagram on load
       setTimeout(() => {
-        this.resetDiagramZoom();
+        this.resetDiagramZoom(false);
       }, 10);
     }
 
@@ -506,60 +506,75 @@ export class DSLVisualizer {
       event.stopPropagation();
     });
 
+    const navGroup = document.createElement('div');
+    navGroup.className = 'canvas-nav-group';
+
     if (total > 1) {
       const prev = this.createControlButton('‹', 'Previous diagram', () => {
         this.previousAttribute();
       });
-
-      const counter = document.createElement('span');
-      counter.className = 'diagram-counter';
-      counter.innerHTML = `<span class="current">${this.currentAttributeIndex + 1}</span><span class="separator">/</span>${total}`;
+      prev.classList.add('nav-step');
+      prev.innerHTML = '<i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i>';
 
       const next = this.createControlButton('›', 'Next diagram', () => {
         this.nextAttribute();
       });
+      next.classList.add('nav-step');
+      next.innerHTML = '<i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>';
 
-      controls.append(prev, counter, next, this.createDivider());
+      navGroup.append(prev, next);
+    } else {
+      navGroup.style.display = 'none';
     }
 
-    const zoomInput = document.createElement('input');
-    zoomInput.type = 'text';
-    zoomInput.className = 'canvas-control-btn wide zoom-input';
-    zoomInput.title = 'Current zoom (click to edit)';
+    const zoomGroup = document.createElement('div');
+    zoomGroup.className = 'canvas-zoom-group';
+
+    const zoomInput = document.createElement('button');
+    zoomInput.type = 'button';
+    zoomInput.className = 'btn-canvas-ctrl zoom-pill';
+    zoomInput.title = 'Fit diagram';
     zoomInput.id = 'zoomInput';
-    zoomInput.value = '100%';
-    zoomInput.style.textAlign = 'center';
-    zoomInput.style.width = '45px';
-    zoomInput.style.border = 'none';
-    zoomInput.style.background = 'transparent';
-    zoomInput.style.fontFamily = 'inherit';
-    zoomInput.style.color = '#fff';
-    zoomInput.style.fontWeight = 'bold';
-    zoomInput.style.cursor = 'text';
-    zoomInput.addEventListener('change', (e) => {
-      const val = parseInt((e.target as HTMLInputElement).value, 10);
-      if (!isNaN(val) && val > 0) {
-        const zoomTo = (globalThis as any).setDiagramZoom;
-        if (zoomTo) zoomTo(val / 100);
-      } else {
-        const currentScale = (globalThis as any).currentScale || 1;
-        (e.target as HTMLInputElement).value = Math.round(currentScale * 100) + '%';
-      }
-    });
+    zoomInput.innerHTML = '<span class="zoom-pill-icon"><i data-lucide="zoom-in" style="width: 15px; height: 15px;"></i></span><span class="zoom-pill-text">100%</span>';
+    zoomInput.addEventListener('click', () => this.resetDiagramZoom());
     
     // Update it with current scale immediately
     setTimeout(() => {
-      const currentScale = (globalThis as any).currentScale || 1;
-      zoomInput.value = Math.round(currentScale * 100) + '%';
+      const currentScale = (globalThis as any).currentScale ?? 1;
+      const text = zoomInput.querySelector('.zoom-pill-text');
+      if (text) text.textContent = Math.round(currentScale * 100) + '%';
     }, 20);
 
-    controls.append(
-      this.createControlButton('-', 'Zoom out', () => this.zoomDiagram(0.9)),
-      zoomInput,
-      this.createControlButton('+', 'Zoom in', () => this.zoomDiagram(1.1))
-    );
+    const zoomOut = this.createControlButton('−', 'Zoom out', () => this.zoomDiagram(0.9));
+    const zoomIn = this.createControlButton('+', 'Zoom in', () => this.zoomDiagram(1.1));
+
+    zoomGroup.append(zoomInput, zoomOut, zoomIn);
+
+    controls.append(navGroup, zoomGroup);
 
     this.svgContainer.appendChild(controls);
+    const lucideIcons = (globalThis as typeof globalThis & { lucide?: { createIcons?: () => void } }).lucide;
+    lucideIcons?.createIcons?.();
+
+    const applyIconSizes = (): void => {
+      controls.querySelectorAll('svg[data-lucide="zoom-in"]').forEach(svg => {
+        const zoomSvg = svg as SVGElement;
+        zoomSvg.setAttribute('width', '15');
+        zoomSvg.setAttribute('height', '15');
+        zoomSvg.style.width = '15px';
+        zoomSvg.style.height = '15px';
+      });
+      controls.querySelectorAll('svg[data-lucide="chevron-left"], svg[data-lucide="chevron-right"]').forEach(svg => {
+        const navSvg = svg as SVGElement;
+        navSvg.setAttribute('width', '14');
+        navSvg.setAttribute('height', '14');
+        navSvg.style.width = '14px';
+        navSvg.style.height = '14px';
+      });
+    };
+
+    requestAnimationFrame(() => applyIconSizes());
+    setTimeout(() => applyIconSizes(), 0);
   }
 
   private createControlButton(
@@ -578,19 +593,13 @@ export class DSLVisualizer {
     return button;
   }
 
-  private createDivider(): HTMLSpanElement {
-    const divider = document.createElement('span');
-    divider.className = 'canvas-control-divider';
-    return divider;
-  }
-
   private zoomDiagram(factor: number): void {
     const zoom = (globalThis as typeof globalThis & { zoomDiagram?: (factor: number) => void }).zoomDiagram;
     zoom?.(factor);
   }
 
-  private resetDiagramZoom(): void {
-    const reset = (globalThis as typeof globalThis & { resetDiagramZoom?: () => void }).resetDiagramZoom;
-    reset?.();
+  private resetDiagramZoom(animate: boolean = true): void {
+    const reset = (globalThis as typeof globalThis & { resetDiagramZoom?: (animate?: boolean) => void }).resetDiagramZoom;
+    reset?.(animate);
   }
 }

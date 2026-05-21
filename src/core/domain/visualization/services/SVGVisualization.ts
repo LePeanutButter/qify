@@ -156,6 +156,7 @@ export class SVGVisualizer {
     this.setText(svg, 'text198', attribute.category.toString());
     this.setText(svg, 'text216', new Date().toLocaleDateString('es-ES'));
     this.setInfoBoxVisibility(svg, options?.showInfo ?? attribute.showInfo ?? false);
+    this.fitViewBoxToGraph(svg);
 
     return new XMLSerializer().serializeToString(svg);
   }
@@ -418,6 +419,46 @@ export class SVGVisualizer {
         element.setAttribute('display', showInfo ? 'inline' : 'none');
       }
     });
+  }
+
+  private fitViewBoxToGraph(svg: Element): void {
+    const viewport = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    viewport.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    viewport.setAttribute('width', '1');
+    viewport.setAttribute('height', '1');
+    viewport.style.position = 'absolute';
+    viewport.style.left = '-99999px';
+    viewport.style.top = '-99999px';
+    viewport.style.visibility = 'hidden';
+
+    const clone = svg.cloneNode(true) as SVGSVGElement;
+    clone.querySelectorAll('#g12, #g24').forEach(node => node.remove());
+    clone.setAttribute('overflow', 'visible');
+    viewport.appendChild(clone);
+    document.body.appendChild(viewport);
+
+    let bounds: DOMRect | SVGRect;
+    try {
+      bounds = (viewport as unknown as SVGGraphicsElement).getBBox();
+    } catch {
+      document.body.removeChild(viewport);
+      return;
+    }
+
+    document.body.removeChild(viewport);
+
+    const padding = 14;
+    const minX = Math.max(0, bounds.x - padding);
+    const minY = Math.max(0, bounds.y - padding);
+    const width = Math.max(1, bounds.width + padding * 2);
+    const height = Math.max(1, bounds.height + padding * 2);
+
+    svg.setAttribute('viewBox', `${minX} ${minY} ${width} ${height}`);
+    svg.setAttribute('width', String(width));
+    svg.setAttribute('height', String(height));
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    svg.setAttribute('data-fit-width', String(width));
+    svg.setAttribute('data-fit-height', String(height));
   }
 
   private wrapFixedWidth(value: string, maxChars: number): string[] {
