@@ -365,7 +365,7 @@ export class EditorManager {
     }
 
     this.lineNumbersDiv.innerHTML = lineNumbers
-      .map((value, index) => `<div class="line-number-row${value === '&nbsp;' ? ' line-number-empty' : ''}">${value}</div>`)
+      .map((value) => `<div class="line-number-row${value === '&nbsp;' ? ' line-number-empty' : ''}">${value}</div>`)
       .join('');
   }
 
