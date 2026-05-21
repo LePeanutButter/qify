@@ -96,11 +96,52 @@ header {
 .tab.active { background-color: rgba(255,255,255,0.04); color:var(--text-main); border:1px solid var(--border-subtle); }
 .tab-icon-cyan { color: var(--accent-cyan); }
 
-.editor-area { flex:1; min-height: 0; display:flex; font-family: var(--font-mono); font-size:13px; line-height:1.6; padding:16px 0; overflow-y:auto; background-color: rgba(6,9,19,0.4); }
+.editor-area { position:relative; flex:1; min-height: 0; display:flex; font-family: var(--font-mono); font-size:13px; line-height:1.6; padding:16px 0; overflow-y:auto; background-color: rgba(6,9,19,0.4); }
+.editor-text-stack { position:relative; flex:1; min-width:0; min-height:0; }
 .line-numbers { width:48px; text-align:right; padding-right:16px; color: rgba(255,255,255,0.15); user-select:none; display:flex; flex-direction:column; align-items:flex-end; flex-shrink:0; }
 .line-numbers div { width:100%; display:flex; align-items:flex-start; justify-content:flex-end; line-height:1.6; }
 .line-number-empty { color: transparent; }
-.code-input { flex:1; background:none; border:none; outline:none; color:#cbd5e1; resize:none; white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; font-family: inherit; font-size: inherit; line-height: inherit; padding-left:4px; }
+.autocomplete-backdrop,
+.code-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0 0 0 4px;
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    background: transparent;
+}
+
+.autocomplete-backdrop {
+    z-index: 1;
+    pointer-events: none;
+    user-select: none;
+    color: rgba(148, 163, 184, 0.52);
+    overflow: auto;
+    scrollbar-width: none;
+}
+
+.code-input {
+    z-index: 2;
+    color: #cbd5e1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.autocomplete-backdrop::-webkit-scrollbar,
+.code-input::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
 .syntax-highlight { /* keep compatibility with existing JS that may query this class */ }
 
 /* token styles kept for highlighting classes used in code */
@@ -157,6 +198,109 @@ button:hover { color: var(--text-main); border-color: rgba(255,255,255,0.08); }
     background: rgba(255, 77, 79, 0.14);
     border-radius: 4px;
     box-shadow: inset 2px 0 0 rgba(255, 77, 79, 0.55);
+}
+
+.autocomplete-hint {
+    position: absolute;
+    z-index: 50;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    min-width: 240px;
+    max-width: 360px;
+    max-height: 240px;
+    overflow: hidden;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+.autocomplete-hint.is-list {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 16px 30px -10px rgba(0, 0, 0, 0.45);
+    overflow-y: auto;
+}
+
+.autocomplete-hint.is-ghost {
+    background: transparent;
+    border: none;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: none;
+}
+
+.autocomplete-hint .autocomplete-option {
+    pointer-events: auto;
+}
+
+.autocomplete-option {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+}
+
+.autocomplete-option:hover,
+.autocomplete-option.active {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-main);
+}
+
+.autocomplete-option.active {
+    transform: translateX(2px);
+}
+
+.autocomplete-ghost {
+    display: inline;
+    align-items: center;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    padding: 0;
+    color: rgba(255, 255, 255, 0.48);
+    text-shadow: 0 0 0 transparent;
+    white-space: pre;
+    letter-spacing: inherit;
+    margin: 0;
+}
+
+.autocomplete-ghost-fill {
+    color: rgba(255, 255, 255, 0.26);
+    white-space: pre;
+}
+
+.autocomplete-label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.autocomplete-option.kind-category .autocomplete-label {
+    color: #7dd3fc;
+}
+
+.autocomplete-option.kind-field .autocomplete-label {
+    color: #c4b5fd;
+}
+
+.autocomplete-option.kind-keyword .autocomplete-label {
+    color: #86efac;
 }
 
 .examples {

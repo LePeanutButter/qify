@@ -64,21 +64,24 @@
                 <div id="lineNumbers" class="line-numbers">
                   <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div>10</div>
                 </div>
-                <!-- keep id 'code' for existing logic -->
-                <div id="code" class="code-input syntax-highlight" contenteditable="true" spellcheck="false">
+                                <div class="editor-text-stack">
+                                        <div id="autocompleteBackdrop" class="autocomplete-backdrop" aria-hidden="true"></div>
+                                        <!-- keep id 'code' for existing logic -->
+                                        <div id="code" class="code-input syntax-highlight" contenteditable="true" spellcheck="false">
 system Ecommerce
 
 attribute PerformanceCheckout {
-  artifact: "CheckoutService"
-  category: PerformanceEfficiency.TimeBehaviour
+    artifact: "CheckoutService"
+    category: PerformanceEfficiency.TimeBehaviour
 
-  source: "external user"
-  stimulus: "1000 concurrent users"
-  environment: "peak hours"
-  response: "response time &lt; 2s"
-  measure: "latency percentile p95"
+    source: "external user"
+    stimulus: "1000 concurrent users"
+    environment: "peak hours"
+    response: "response time &lt; 2s"
+    measure: "latency percentile p95"
 }
-                </div>
+                                        </div>
+                                </div>
             </div>
 
             <div class="bottom-bar">
