@@ -355,6 +355,8 @@ export class EditorManager {
     mirror.style.borderRightWidth = computed.borderRightWidth;
     mirror.style.borderTopWidth = computed.borderTopWidth;
     mirror.style.borderBottomWidth = computed.borderBottomWidth;
+    mirror.style.textIndent = computed.textIndent;
+    this.lineNumbersDiv.style.lineHeight = computed.lineHeight;
 
     const lineNumbers: string[] = [];
     for (let i = 0; i < lines.length; i++) {
@@ -368,7 +370,7 @@ export class EditorManager {
     }
 
     this.lineNumbersDiv.innerHTML = lineNumbers
-      .map((value) => `<div class="line-number-row${value === '&nbsp;' ? ' line-number-empty' : ''}">${value}</div>`)
+      .map((value) => `<div class="line-number-row${value === '&nbsp;' ? ' line-number-empty' : ''}" style="height:${lineHeight}px;line-height:${lineHeight}px">${value}</div>`)
       .join('');
   }
 
