@@ -178,6 +178,17 @@ export class DSLParser {
    * @returns ASTNode for attribute declaration
    */
   private parseAttributeDeclaration(): ASTNode | null {
+    if (this.check('KEYWORD_ATTRIBUTE') || this.check('KEYWORD_SYSTEM')) {
+      const repeatedKeyword = this.peek();
+      this.addError(
+        `Expected attribute name after 'attribute'; found '${repeatedKeyword.value}'`,
+        repeatedKeyword.position,
+        'error'
+      );
+      this.advance();
+      return null;
+    }
+
     const attributeIdentifier = this.consume('IDENTIFIER', 'Expected attribute name');
     if (!attributeIdentifier) return null;
 
@@ -704,13 +715,14 @@ export class DSLParser {
       { type: 'KEYWORD_SHOW_INFO', pattern: /\bshowInfo\b/ },
       { type: 'BOOLEAN', pattern: /\b(?:true|false)\b/ },
       { type: 'STRING', pattern: /"([^"]*)"/ },
-      { type: 'IDENTIFIER', pattern: /[A-Za-z_]\w*/ },
+      { type: 'IDENTIFIER', pattern: /(?:[\p{L}_])[\p{L}\p{M}\p{N}_]*/u },
       { type: 'NUMBER', pattern: /\b\d+(\.\d+)?\b/ },
       { type: 'LBRACE', pattern: /{/ },
       { type: 'RBRACE', pattern: /}/ },
       { type: 'COLON', pattern: /:/ },
       { type: 'COMMA', pattern: /,/ },
       { type: 'DOT', pattern: /\./ },
+      { type: 'COMMENT', pattern: /\/\/[^\r\n]*/ },
       { type: 'WHITESPACE', pattern: /\s+/ }
     ];
   }
@@ -724,7 +736,7 @@ export class DSLParser {
     const remainingText = text.slice(position);
 
     for (const { type, pattern } of this.getTokenPatterns()) {
-      const regex = new RegExp(`^${pattern.source}`);
+      const regex = new RegExp(`^${pattern.source}`, pattern.flags.includes('u') ? 'u' : '');
       const match = regex.exec(remainingText);
 
       if (!match) continue;
@@ -734,7 +746,7 @@ export class DSLParser {
 
       return {
         token:
-          type === 'WHITESPACE'
+          type === 'WHITESPACE' || type === 'COMMENT'
             ? null
             : {
                 type,

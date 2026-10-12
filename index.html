@@ -17,27 +17,52 @@
 </head>
 <body>
 
+    <section class="desktop-required" aria-labelledby="desktopRequiredTitle">
+        <div class="desktop-required-card">
+            <img src="./img/qify-icon.png" alt="Qify" class="desktop-required-logo">
+            <span class="desktop-required-kicker">Qify Studio</span>
+            <h1 id="desktopRequiredTitle" data-i18n="desktopRequiredTitle">Qify Studio is designed for computers</h1>
+            <p data-i18n="desktopRequiredText">Please open Qify Studio from a desktop or laptop to use the editor, visual canvas, and export tools.</p>
+            <small data-i18n="desktopRequiredHint">A larger screen is required for the best experience.</small>
+        </div>
+    </section>
+
     <header class="header">
         <div class="brand">
             <img src="./img/qify-icon.png" alt="Qify" class="brand-logo">
-            <span class="brand-text">Qify Studio</span>
-            <div class="project-meta">
-                <div class="badge-status"></div>
-                <span id="status">main_cluster.qify</span>
+            <div class="brand-copy">
+                <span class="brand-text">Qify Studio</span>
+                <span class="brand-kicker">Quality attribute modeling</span>
             </div>
         </div>
         <div class="top-actions">
+            <nav class="studio-nav" aria-label="Studio sections">
+                <span class="studio-nav-item active" data-i18n="editor">editor</span>
+                <button class="studio-nav-item documentation-trigger" type="button" onclick="openDocumentation()" data-i18n="documentation">documentation</button>
+            </nav>
+            <label class="language-picker">
+                <span class="sr-only">Language</span>
+                <select id="languageSelect" aria-label="Language">
+                    <option value="en">🇺🇸 English - US</option>
+                    <option value="es">🇨🇴 Español - Colombia</option>
+                    <option value="de">🇩🇪 Deutsch - Deutschland</option>
+                </select>
+            </label>
+            <button class="btn-icon-top accessibility-trigger" type="button" onclick="openAccessibility()" data-i18n-aria-label="accessibility" aria-label="Accessibility">
+                <i data-lucide="accessibility" style="width: 17px; height: 17px;"></i>
+            </button>
             <div class="dropdown-container examples-menu-wrap">
                 <button class="btn-dropdown-trigger" onclick="toggleExamples()" title="Examples">
                     <i data-lucide="folder-open" style="width: 14px; height: 14px; color: var(--accent-cyan);"></i>
-                    <span>Examples</span>
+                    <span data-i18n="examples">Examples</span>
                     <i data-lucide="chevron-down" style="width: 12px; height: 12px; margin-left: 2px; color: var(--text-dark);"></i>
                 </button>
                 <div class="examples" id="examples">
-                    <button onclick="loadExample('basic')">Basic Example</button>
-                    <button onclick="loadExample('ecommerce')">E-commerce System</button>
-                    <button onclick="loadExample('healthcare')">Healthcare System</button>
-                    <button onclick="loadExample('iot')">IoT System</button>
+                    <button onclick="loadExample('basic')" data-i18n="basicExample">Basic Example</button>
+                    <button onclick="loadExample('ecommerce')" data-i18n="ecommerceSystem">E-commerce System</button>
+                    <button onclick="loadExample('healthcare')" data-i18n="healthcareSystem">Healthcare System</button>
+                    <button onclick="loadExample('iot')" data-i18n="iotSystem">IoT System</button>
+                    <button onclick="loadExample('smartrip')" data-i18n="smartripSystem">SmarTrip ASRs</button>
                 </div>
             </div>
             <a class="btn-icon-top github-link" href="https://github.com/LePeanutButter/qify" target="_blank" rel="noopener noreferrer" title="View on GitHub">
@@ -91,13 +116,14 @@ attribute PerformanceCheckout {
                     <button class="btn-action" onclick="exportSVG()"><i data-lucide="layers" style="width: 14px; height: 14px;"></i>SVG</button>
                 </div>
                 <div class="action-group">
-                    <button class="btn-action" onclick="importCode()"><i data-lucide="upload-cloud" style="width: 14px; height: 14px;"></i>Import .qify</button>
-                    <button class="btn-action primary" onclick="downloadCode()"><i data-lucide="save" style="width: 14px; height: 14px;"></i>Export .qify</button>
+                    <button class="btn-action" onclick="importCode()"><i data-lucide="upload-cloud" style="width: 14px; height: 14px;"></i><span data-i18n="importCode">Import .qify</span></button>
+                    <button class="btn-action primary" onclick="downloadCode()"><i data-lucide="save" style="width: 14px; height: 14px;"></i><span data-i18n="downloadCode">Export .qify</span></button>
                     <input type="file" id="fileInput" accept=".qify" style="display:none" onchange="handleFileImport(event)">
                 </div>
             </div>
         </div>
 
+        <div class="workspace-divider" id="workspaceDivider" role="separator" aria-orientation="vertical" aria-label="Resize editor and canvas" tabindex="0"></div>
         <div class="right-panel">
             <div class="canvas-area">
                 <div id="visualization" class="visualization">
@@ -108,20 +134,46 @@ attribute PerformanceCheckout {
                         <div class="node-text">Awaiting Reactive Stream Graph</div>
                     </div>
                 </div>
+                <div class="canvas-context-bar" aria-label="Current diagram context">
+                    <div class="context-system">
+                        <span class="context-eyebrow" data-i18n="system">System</span>
+                        <strong id="contextSystem">Ecommerce</strong>
+                    </div>
+                    <div class="context-divider"></div>
+                    <div class="context-attribute">
+                        <span class="context-eyebrow" data-i18n="activeAttribute">Active attribute</span>
+                        <strong id="contextAttribute">PerformanceCheckout</strong>
+                    </div>
+                    <div class="context-category">
+                        <span class="context-eyebrow" data-i18n="isoCategory">ISO 25010 category</span>
+                        <strong id="contextCategory">PerformanceEfficiency.TimeBehaviour</strong>
+                    </div>
+                    <div class="context-count">
+                        <strong id="contextCount">1</strong>
+                        <span data-i18n="attribute">attribute</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="readme-panel">
+            <div class="readme-backdrop" id="readmeBackdrop" onclick="closeDocumentation()" aria-hidden="true"></div>
+            <section class="readme-panel" id="documentationModal" role="dialog" aria-modal="true" aria-labelledby="documentationTitle" aria-hidden="true">
                 <div class="readme-header">
-                    <span>DOCUMENTATION & OVERVIEW</span>
+                    <div>
+                        <span data-i18n="documentationOverview">DOCUMENTATION & OVERVIEW</span>
+                        <small data-i18n="documentationReference">Qify Studio reference</small>
+                    </div>
+                    <button class="readme-close" type="button" onclick="closeDocumentation()" aria-label="Close documentation" data-i18n-aria-label="closeDocumentation">
+                        <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+                    </button>
                 </div>
                 <div class="readme-content">
-                    <h1><i data-lucide="book-open" style="width: 16px; height: 16px; color: var(--accent-cyan);"></i> Qify</h1>
-                    <p class="readme-lead">DSL visual para documentar atributos de calidad de software basados en ISO 25010.</p>
+                    <h1 id="documentationTitle"><i data-lucide="book-open" style="width: 16px; height: 16px; color: var(--accent-cyan);"></i> Qify</h1>
+                    <p class="readme-lead" data-i18n="qifyLead">Visual DSL for documenting software quality attributes based on ISO 25010.</p>
 
-                    <h2>Cómo usar Qify</h2>
-                    <p>Escribe o importa un archivo <code>.qify</code> en el editor de la izquierda. La vista superior derecha se actualiza automáticamente y muestra un diagrama SVG exportable por cada atributo definido.</p>
+                    <h2 data-i18n="howToUse">How to use Qify</h2>
+                    <p data-i18n="howToUseText">Write or import a .qify file in the editor on the left. The visualization updates automatically and shows an exportable SVG diagram for each defined attribute.</p>
 
-                    <h2>Estructura básica</h2>
+                    <h2 data-i18n="basicStructure">Basic structure</h2>
                     <pre><code>system Ecommerce
 
 attribute PerformanceCheckout {
@@ -134,9 +186,10 @@ attribute PerformanceCheckout {
     response: "response time &lt; 2s",
     measure: "latency percentile p95"
 }</code></pre>
+                    <p data-i18n="commentsText">Add single-line comments with // anywhere outside a quoted value. Comments are ignored when the DSL is parsed.</p>
 
-                    <h2>Campos del DSL</h2>
-                    <ul>
+                    <h2 data-i18n="dslFields">DSL fields</h2>
+                    <ul data-i18n="fieldsText">
                         <li><strong>system</strong>: nombre del sistema evaluado.</li>
                         <li><strong>attribute</strong>: nombre del atributo o requisito de calidad.</li>
                         <li><strong>artifact</strong>: componente, servicio o módulo afectado.</li>
@@ -148,8 +201,8 @@ attribute PerformanceCheckout {
                         <li><strong>measure</strong>: métrica verificable para validar el resultado.</li>
                     </ul>
 
-                    <h2>Caja de información</h2>
-                    <p>La caja inferior del diagrama es opcional. Para mostrar sistema, atributo, categoría y fecha de modificación, agrega <code>showInfo</code> dentro del bloque <code>attribute</code>.</p>
+                    <h2 data-i18n="infoBox">Information box</h2>
+                    <p data-i18n="infoBoxText">The optional diagram box can show the system, attribute, category, and modification date. Add showInfo inside the attribute block.</p>
                     <pre><code>attribute PerformanceCheckout {
     artifact: "CheckoutService",
     category: PerformanceEfficiency.TimeBehaviour,
@@ -161,13 +214,13 @@ attribute PerformanceCheckout {
     response: "response time &lt; 2s",
   measure: "latency percentile p95"
 }</code></pre>
-                    <p>También puedes usar <code>showInfo: true,</code>. Si no se agrega, la caja no se muestra. Con <code>showInfo: false,</code> queda oculta.</p>
+                    <p data-i18n="showInfoNotes">You can also use showInfo: true. If omitted, the box stays hidden. With showInfo: false, it remains hidden.</p>
 
-                    <h2>Varios diagramas</h2>
-                    <p>Si defines varios bloques <code>attribute</code>, Qify crea un diagrama por atributo. Usa los controles flotantes del visualizador para avanzar, retroceder, hacer zoom, alejar o restablecer la vista.</p>
+                    <h2 data-i18n="multipleDiagrams">Multiple diagrams</h2>
+                    <p data-i18n="multipleDiagramsText">When you define several attribute blocks, Qify creates one diagram per attribute. Use the floating controls to navigate, zoom, and reset the view.</p>
 
-                    <h2>Exportación</h2>
-                    <ul>
+                    <h2 data-i18n="export">Export</h2>
+                    <ul data-i18n="exportItems">
                         <li><strong>Export PNG</strong>: descarga una imagen rasterizada del diagrama.</li>
                         <li><strong>Export SVG</strong>: descarga SVG puro sin <code>foreignObject</code>.</li>
                         <li><strong>Export PDF</strong>: convierte el SVG puro a PDF seleccionable directamente en el navegador.</li>
@@ -175,15 +228,30 @@ attribute PerformanceCheckout {
                         <li><strong>Import .qify</strong>: carga un archivo DSL existente.</li>
                     </ul>
 
-                    <h2>Categorías soportadas</h2>
-                    <p>Incluye familias ISO 25010 como <code>FunctionalSuitability</code>, <code>PerformanceEfficiency</code>, <code>Compatibility</code>, <code>InteractionCapability</code>, <code>Reliability</code>, <code>Security</code>, <code>Maintainability</code>, <code>Flexibility</code> y <code>Safety</code>.</p>
+                    <h2 data-i18n="categories">Supported categories</h2>
+                    <p data-i18n="categoriesText">Includes ISO 25010 families such as FunctionalSuitability, PerformanceEfficiency, Compatibility, InteractionCapability, Reliability, Security, Maintainability, Flexibility, and Safety.</p>
 
-                    <h2>Licencia y desarrollador</h2>
-                    <p><strong>Licencia:</strong> GPL-3.0 license.</p>
-                    <p><strong>Desarrollador:</strong>
-                    <a href="https://github.com/LePeanutButter" target="_blank" rel="noopener noreferrer" style="color: #cccccc;">LePeanutButter.</a>
-                    </p>
-                </div>
+                    <h2 data-i18n="licenseDeveloper">License and developer</h2>
+                    <p data-i18n="licenseText">License: GPL-3.0 license. Developer: LePeanutButter.</p>
+                </section>
+                <div class="accessibility-backdrop" id="accessibilityBackdrop" onclick="closeAccessibility()" aria-hidden="true"></div>
+                <section class="accessibility-panel" id="accessibilityModal" role="dialog" aria-modal="true" aria-labelledby="accessibilityTitle" aria-hidden="true">
+                    <div class="readme-header">
+                        <div>
+                            <span id="accessibilityTitle" data-i18n="accessibility">Accessibility</span>
+                            <small>Qify Studio</small>
+                        </div>
+                        <button class="readme-close" type="button" onclick="closeAccessibility()" data-i18n-aria-label="closeAccessibility" aria-label="Close accessibility settings">
+                            <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+                        </button>
+                    </div>
+                    <div class="accessibility-options">
+                        <label><span data-i18n="lightMode">Light mode</span><input id="lightModeToggle" type="checkbox"></label>
+                        <label><span data-i18n="highContrast">High contrast</span><input id="highContrastToggle" type="checkbox"></label>
+                        <label><span data-i18n="largeText">Large text</span><input id="largeTextToggle" type="checkbox"></label>
+                        <label><span data-i18n="reducedMotion">Reduced motion</span><input id="reducedMotionToggle" type="checkbox"></label>
+                    </div>
+                </section>
             </div>
         </div>
     </div>
@@ -198,6 +266,31 @@ attribute PerformanceCheckout {
     <script>
   document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
   document.addEventListener('dragstart', function(e) { if (e.target.tagName === 'IMG') e.preventDefault(); });
+
+  const documentationModal = document.getElementById('documentationModal');
+  const readmeBackdrop = document.getElementById('readmeBackdrop');
+
+  window.openDocumentation = function() {
+    documentationModal.classList.add('is-open');
+    readmeBackdrop.classList.add('is-open');
+    documentationModal.setAttribute('aria-hidden', 'false');
+    readmeBackdrop.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+  };
+
+  window.closeDocumentation = function() {
+    documentationModal.classList.remove('is-open');
+    readmeBackdrop.classList.remove('is-open');
+    documentationModal.setAttribute('aria-hidden', 'true');
+    readmeBackdrop.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && documentationModal.classList.contains('is-open')) {
+      closeDocumentation();
+    }
+  });
 
   let isDragging = false; let startX, startY; let currentX = 0, currentY = 0; let currentScale = 1;
     let suppressDiagramTransition = false;

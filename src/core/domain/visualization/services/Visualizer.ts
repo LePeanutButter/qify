@@ -14,6 +14,7 @@ import { DSLParser } from '../../dsl/services/DSLParser';
 import { SVGVisualizer } from './SVGVisualization';
 import { jsPDF } from 'jspdf';
 import { svg2pdf } from 'svg2pdf.js';
+import type { Language } from '../../../../services/i18n.service';
 
 /**
  * Visual configuration interface
@@ -123,7 +124,7 @@ export class DSLVisualizer {
 
       if (this.errors.length > 0) {
         this.currentProgram = null;
-        this.renderError(this.errors[0]?.message ?? 'Invalid DSL');
+        this.renderError(this.errors);
 
         return {
           success: false,
@@ -142,7 +143,7 @@ export class DSLVisualizer {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown visualization error';
       this.errors = [{ message: errorMessage, severity: 'error' }];
-      this.renderError(errorMessage);
+      this.renderError([{ message: errorMessage, severity: 'error' }]);
 
       return {
         success: false,
@@ -173,6 +174,7 @@ export class DSLVisualizer {
     if (this.svgContainer) {
       this.svgContainer.innerHTML = this.lastSvgString;
       this.renderCanvasControls();
+        this.updateContextBar(activeAttribute);
       
       // Auto-fit diagram on load
       setTimeout(() => {
@@ -190,15 +192,28 @@ export class DSLVisualizer {
   /**
    * Render error message to SVG
    */
-  private renderError(message: string): void {
-    const errorSvg = this.svgRenderer.renderErrors([
-      { message, severity: 'error' }
-    ]);
+  private renderError(errors: ValidationError[]): void {
+    const errorSvg = this.svgRenderer.renderErrors(errors);
     this.lastSvgString = errorSvg;
 
     if (this.svgContainer) {
       this.svgContainer.innerHTML = errorSvg;
     }
+    this.updateContextBar();
+  }
+
+  private updateContextBar(activeAttribute?: Attribute): void {
+    const system = document.getElementById('contextSystem');
+    const attribute = document.getElementById('contextAttribute');
+    const category = document.getElementById('contextCategory');
+    const count = document.getElementById('contextCount');
+
+    if (!system || !attribute || !category || !count) return;
+
+    system.textContent = this.currentProgram?.system.name ?? 'No system';
+    attribute.textContent = activeAttribute?.name ?? 'No active attribute';
+    category.textContent = activeAttribute?.category ?? 'No category';
+    count.textContent = String(this.currentProgram?.allAttributes.length ?? 0);
   }
 
   /**
@@ -217,6 +232,11 @@ export class DSLVisualizer {
    */
   getCurrentProgram(): DSLProgram | null {
     return this.currentProgram;
+  }
+
+  setLanguage(language: Language): void {
+    void language;
+    if (this.currentDSLText) this.visualize(this.currentDSLText);
   }
 
   /**
@@ -317,9 +337,13 @@ export class DSLVisualizer {
     }
 
     const svgString = this.lastSvgString;
-    const scale = 2;
-    const width = 1200 * scale;
-    const height = 900 * scale;
+    const parser = new DOMParser();
+    const svgDocument = parser.parseFromString(svgString, 'image/svg+xml');
+    const svgElement = svgDocument.documentElement as unknown as SVGSVGElement;
+    const { width: sourceWidth, height: sourceHeight } = this.getSvgPdfSize(svgElement);
+    const exportScale = 3;
+    const width = Math.max(1, Math.round(sourceWidth * exportScale));
+    const height = Math.max(1, Math.round(sourceHeight * exportScale));
 
     // Encode SVG as base64
     const encoded = globalThis.btoa(
@@ -343,7 +367,7 @@ export class DSLVisualizer {
           return;
         }
 
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = '#f6f7fb';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
 
