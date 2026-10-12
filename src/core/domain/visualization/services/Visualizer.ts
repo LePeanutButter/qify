@@ -14,6 +14,7 @@ import { DSLParser } from '../../dsl/services/DSLParser';
 import { SVGVisualizer } from './SVGVisualization';
 import { jsPDF } from 'jspdf';
 import { svg2pdf } from 'svg2pdf.js';
+import type { Language } from '../../../../services/i18n.service';
 
 /**
  * Visual configuration interface
@@ -173,6 +174,7 @@ export class DSLVisualizer {
     if (this.svgContainer) {
       this.svgContainer.innerHTML = this.lastSvgString;
       this.renderCanvasControls();
+        this.updateContextBar(activeAttribute);
       
       // Auto-fit diagram on load
       setTimeout(() => {
@@ -199,6 +201,21 @@ export class DSLVisualizer {
     if (this.svgContainer) {
       this.svgContainer.innerHTML = errorSvg;
     }
+    this.updateContextBar();
+  }
+
+  private updateContextBar(activeAttribute?: Attribute): void {
+    const system = document.getElementById('contextSystem');
+    const attribute = document.getElementById('contextAttribute');
+    const category = document.getElementById('contextCategory');
+    const count = document.getElementById('contextCount');
+
+    if (!system || !attribute || !category || !count) return;
+
+    system.textContent = this.currentProgram?.system.name ?? 'No system';
+    attribute.textContent = activeAttribute?.name ?? 'No active attribute';
+    category.textContent = activeAttribute?.category ?? 'No category';
+    count.textContent = String(this.currentProgram?.allAttributes.length ?? 0);
   }
 
   /**
@@ -217,6 +234,11 @@ export class DSLVisualizer {
    */
   getCurrentProgram(): DSLProgram | null {
     return this.currentProgram;
+  }
+
+  setLanguage(language: Language): void {
+    void language;
+    if (this.currentDSLText) this.visualize(this.currentDSLText);
   }
 
   /**
@@ -343,7 +365,7 @@ export class DSLVisualizer {
           return;
         }
 
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = '#f6f7fb';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
 

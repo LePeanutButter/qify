@@ -7,6 +7,12 @@ import { DSLVisualizer } from './core/domain/visualization/services/Visualizer';
 import { ExportService } from './services/export.service';
 import { EditorManager } from './hooks/use-editor';
 import { updateStatus, triggerDownload, copyErrors, sanitizeFileName } from './utils/dom.utils';
+import { onLanguageChange, setLanguage, type Language } from './services/i18n.service';
+import {
+  applyAccessibilityPreferences,
+  getAccessibilityPreferences,
+  updateAccessibilityPreference
+} from './services/accessibility.service';
 
 // Global instances
 let visualizer: DSLVisualizer;
@@ -18,10 +24,23 @@ let editor: EditorManager;
  */
 function initializeApp(): void {
   try {
+    applyAccessibilityPreferences(getAccessibilityPreferences());
     // 1. Initialize core components
     visualizer = new DSLVisualizer('canvas', 'visualization');
     exporter = new ExportService(visualizer);
     editor = new EditorManager(visualizer);
+    const languageSelect = document.getElementById('languageSelect') as HTMLSelectElement | null;
+    if (languageSelect) {
+      languageSelect.value = 'en';
+      languageSelect.addEventListener('change', () => {
+        setLanguage(languageSelect.value as Language);
+      });
+    }
+    setLanguage('en');
+    onLanguageChange(language => {
+      visualizer.setLanguage(language);
+      editor.refreshExampleLanguage();
+    });
     
     // 2. Set up editor event listeners
     editor.setupEventListeners();
@@ -69,8 +88,52 @@ function setupGlobalActions(): void {
         }
       });
     }
+  }
+
+  const accessibilityModal = document.getElementById('accessibilityModal');
+  const accessibilityBackdrop = document.getElementById('accessibilityBackdrop');
+  (window as any).openAccessibility = () => {
+    accessibilityModal?.classList.add('is-open');
+    accessibilityBackdrop?.classList.add('is-open');
+    accessibilityModal?.setAttribute('aria-hidden', 'false');
+    accessibilityBackdrop?.setAttribute('aria-hidden', 'false');
+    syncAccessibilityControls();
   };
-  
+  (window as any).closeAccessibility = () => {
+    accessibilityModal?.classList.remove('is-open');
+    accessibilityBackdrop?.classList.remove('is-open');
+    accessibilityModal?.setAttribute('aria-hidden', 'true');
+    accessibilityBackdrop?.setAttribute('aria-hidden', 'true');
+  };
+
+  const bindToggle = (id: string, key: 'theme' | 'contrast' | 'textSize' | 'motion'): void => {
+    document.getElementById(id)?.addEventListener('change', event => {
+      const checked = (event.target as HTMLInputElement).checked;
+      if (key === 'contrast') updateAccessibilityPreference(key, checked ? 'high' : 'normal');
+      if (key === 'textSize') updateAccessibilityPreference(key, checked ? 'large' : 'normal');
+      if (key === 'motion') updateAccessibilityPreference(key, checked ? 'reduced' : 'normal');
+      if (key === 'theme') updateAccessibilityPreference(key, checked ? 'light' : 'dark');
+    });
+  };
+  bindToggle('lightModeToggle', 'theme');
+  bindToggle('highContrastToggle', 'contrast');
+  bindToggle('largeTextToggle', 'textSize');
+  bindToggle('reducedMotionToggle', 'motion');
+  function syncAccessibilityControls(): void {
+    const preferences = getAccessibilityPreferences();
+    const values: Record<string, boolean> = {
+      lightModeToggle: preferences.theme === 'light',
+      highContrastToggle: preferences.contrast === 'high',
+      largeTextToggle: preferences.textSize === 'large',
+      reducedMotionToggle: preferences.motion === 'reduced'
+    };
+    Object.entries(values).forEach(([id, checked]) => {
+      const input = document.getElementById(id) as HTMLInputElement | null;
+      if (input) input.checked = checked;
+    });
+  }
+  syncAccessibilityControls();
+
   // Export actions
   (window as any).exportPNG = () => exporter.exportPNG();
   (window as any).exportSVG = () => exporter.exportSVG();

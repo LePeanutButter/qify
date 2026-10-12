@@ -8,6 +8,7 @@ import {
   clearCanvas 
 } from '../utils/dom.utils';
 import { EXAMPLES, CATEGORIES } from '../constants/dsl.constants';
+import { translateExample } from '../services/i18n.service';
 
 /**
  * Hook-like service to manage editor state and event listeners
@@ -28,6 +29,8 @@ export class EditorManager {
   private autocompleteRange: { start: number; end: number } | null = null;
   private autocompleteSuppressed = false;
   private isHighlighting: boolean = false;
+  private loadedExampleName: keyof typeof EXAMPLES | null = null;
+  private loadedExampleText: string | null = null;
   
   // Undo/Redo stack
   private history: { text: string; caretPos: number }[] = [];
@@ -502,7 +505,11 @@ export class EditorManager {
    */
   loadExample(exampleName: string): void {
     if (this.codeElement && EXAMPLES[exampleName as keyof typeof EXAMPLES]) {
-      this.codeElement.textContent = EXAMPLES[exampleName as keyof typeof EXAMPLES];
+      const exampleKey = exampleName as keyof typeof EXAMPLES;
+      this.loadedExampleName = exampleKey;
+      const localizedExample = translateExample(exampleKey, EXAMPLES[exampleKey]);
+      this.codeElement.textContent = localizedExample;
+      this.loadedExampleText = localizedExample;
       // Save initial state to history
       const text = this.codeElement.textContent;
       this.history = [{ text, caretPos: 0 }];
@@ -510,6 +517,12 @@ export class EditorManager {
       this.autocompleteSuppressed = true;
       this.handleCodeInput(true, -1, false);
       this.examplesDiv?.classList.remove('show');
+    }
+  }
+
+  refreshExampleLanguage(): void {
+    if (this.loadedExampleName && this.codeElement?.textContent === this.loadedExampleText) {
+      this.loadExample(this.loadedExampleName);
     }
   }
 

@@ -18,6 +18,7 @@ import {
   createText,
   serializeSVG
 } from './SVGRenderer';
+import { getDiagramLabels } from '../../../../services/i18n.service';
 
 export interface SVGVisualizationConfig {
   colors: {
@@ -63,7 +64,7 @@ interface RenderOptions {
 export class SVGVisualizer {
   private config: SVGVisualizationConfig = {
     colors: {
-      background: '#ffffff',
+      background: '#f6f7fb',
       system: '#d0d0d0',
       attribute: '#a7a7a8',
       artifact: '#fafafa',
@@ -111,6 +112,8 @@ export class SVGVisualizer {
     const svg = documentSvg.documentElement;
 
     svg.setAttribute('class', 'diagram-template');
+    this.setDiagramBackground(svg);
+    this.setDiagramLabels(svg);
     this.forceArial(svg);
 
     // 1. Prepare all wrapped lines
@@ -159,6 +162,31 @@ export class SVGVisualizer {
     this.fitViewBoxToGraph(svg);
 
     return new XMLSerializer().serializeToString(svg);
+  }
+
+  private setDiagramBackground(svg: Element): void {
+    const backgroundColor = '#f6f7fb';
+    ['path22', 'path34'].forEach(id => {
+      const background = svg.querySelector(`#${id}`);
+      if (!background) return;
+
+      const style = background.getAttribute('style') ?? '';
+      background.setAttribute(
+        'style',
+        style.replace(/fill:#[0-9a-fA-F]+/, `fill:${backgroundColor}`)
+      );
+    });
+    svg.setAttribute('style', `background-color:${backgroundColor};`);
+  }
+
+  private setDiagramLabels(svg: Element): void {
+    const labels = getDiagramLabels();
+    this.setText(svg, 'text72', labels.artifact);
+    this.setText(svg, 'text96', labels.source);
+    this.setText(svg, 'text104', labels.stimulus);
+    this.setText(svg, 'text116', labels.environment);
+    this.setText(svg, 'text124', labels.response);
+    this.setText(svg, 'text132', labels.measure);
   }
 
   private adjustLayout(svg: Element, artifactExtra: number, scenarioExtra: number, artifactLineCount: number): void {
