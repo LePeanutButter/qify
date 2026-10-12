@@ -313,7 +313,9 @@ export class SVGVisualizer {
    */
   renderErrors(errors: ValidationError[]): string {
     const width = 1200;
-    const height = 300;
+    const visibleErrors = errors.slice(0, 5);
+    const errorRows = visibleErrors.map(error => Math.max(1, Math.ceil(error.message.length / 92)));
+    const height = Math.max(360, 170 + errorRows.reduce((total, rows) => total + rows * 30 + 38, 0));
     const svg = createSVGRoot(width, height);
 
     const bg = createRect(0, 0, width, height, {
@@ -321,28 +323,48 @@ export class SVGVisualizer {
     });
     svg.appendChild(bg);
 
-    const title = createText('Validation Errors', 20, 30, {
-      fontSize: this.config.fonts.titleSize,
+    const title = createText('Unable to render this diagram', 20, 30, {
+      fontSize: 28,
       fontFamily: this.config.fonts.family,
       fontWeight: 'bold',
       fill: this.config.colors.error
     });
     svg.appendChild(title);
 
-    let y = 60;
-    errors.slice(0, 5).forEach(error => {
-      const errorText = createText(`- ${error.message}`, 40, y, {
-        fontSize: this.config.fonts.labelSize,
+    const summary = createText('Fix the highlighted DSL location and the visualization will update automatically.', 20, 58, {
+      fontSize: 18,
+      fontFamily: this.config.fonts.family,
+      fill: this.config.colors.text
+    });
+    svg.appendChild(summary);
+
+    let y = 108;
+    visibleErrors.forEach(error => {
+      const location = error.line
+        ? `Line ${error.line}${error.column ? `, column ${error.column}` : ''}`
+        : 'Location unavailable';
+      const locationText = createText(location, 40, y, {
+        fontSize: 20,
         fontFamily: this.config.fonts.family,
-        fill: this.config.colors.error
+        fontWeight: 'bold',
+        fill: this.config.colors.text
       });
-      svg.appendChild(errorText);
-      y += this.config.spacing.lineHeight;
+      svg.appendChild(locationText);
+      const messageLines = error.message.match(/.{1,92}(?:\s|$)/g) ?? [error.message];
+      messageLines.forEach((line, index) => {
+        const errorText = createText(`${index === 0 ? '- ' : '  '}${line.trim()}`, 40, y + 30 + index * 25, {
+          fontSize: 18,
+          fontFamily: this.config.fonts.family,
+          fill: this.config.colors.error
+        });
+        svg.appendChild(errorText);
+      });
+      y += 38 + messageLines.length * 30;
     });
 
     if (errors.length > 5) {
       const moreText = createText(`... and ${errors.length - 5} more errors`, 40, y, {
-        fontSize: this.config.fonts.smallSize,
+        fontSize: 18,
         fontFamily: this.config.fonts.family,
         fill: this.config.colors.error
       });

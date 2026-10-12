@@ -72,9 +72,11 @@ export class SyntaxHighlighter {
     const lines = processedText.split('\n');
     errors.forEach(error => {
       if (error.line && error.line <= lines.length) {
-        const line = lines[error.line - 1];
+        const lineIndex = error.line - 1;
+        const line = lines[lineIndex];
         if (line && !line.includes('error-line-highlight')) {
-          lines[error.line - 1] = `<span class="error-line-highlight">${line}</span>`;
+          const column = Math.max(1, error.column ?? 1);
+          lines[lineIndex] = `<span class="error-line-highlight" data-error-column="${column}" style="--error-column:${column}">${line}</span>`;
         }
       }
     });

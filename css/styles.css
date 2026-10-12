@@ -101,6 +101,31 @@ header {
 .line-numbers { width:48px; text-align:right; padding-right:16px; color: rgba(255,255,255,0.15); user-select:none; display:flex; flex-direction:column; align-items:flex-end; flex-shrink:0; overflow:hidden; height:100%; }
 .line-numbers div { width:100%; display:flex; align-items:flex-start; justify-content:flex-end; line-height:1.6; }
 .line-number-empty { color: transparent; }
+.error-line-highlight {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    border-left: 3px solid #ff4d4f;
+    background:
+        linear-gradient(
+            90deg,
+            transparent calc((var(--error-column) - 1) * 0.602em),
+            rgba(255, 77, 79, 0.28) calc((var(--error-column) - 1) * 0.602em),
+            rgba(255, 77, 79, 0.28) calc(var(--error-column) * 0.602em),
+            transparent calc(var(--error-column) * 0.602em)
+        );
+    border-radius: 2px;
+}
+.error-line-highlight::after {
+    position: absolute;
+    top: 0;
+    left: calc((var(--error-column) - 1) * 0.602em);
+    width: 0.602em;
+    height: 100%;
+    border-bottom: 2px solid #ff4d4f;
+    content: "";
+    pointer-events: none;
+}
 .autocomplete-backdrop,
 .code-input {
     position: absolute;
@@ -841,10 +866,10 @@ header {
 
 .workspace {
     height: calc(100dvh - 80px);
-    max-width: 1120px;
+    max-width: 1240px;
     width: 100%;
     margin: 0 auto;
-    grid-template-columns: minmax(420px, 0.92fr) minmax(480px, 1.08fr);
+    grid-template-columns: minmax(420px, 0.86fr) minmax(500px, 1.14fr);
     gap: 18px;
     padding: 26px 28px 30px;
     background: transparent;

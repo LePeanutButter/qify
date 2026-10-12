@@ -124,7 +124,7 @@ export class DSLVisualizer {
 
       if (this.errors.length > 0) {
         this.currentProgram = null;
-        this.renderError(this.errors[0]?.message ?? 'Invalid DSL');
+        this.renderError(this.errors);
 
         return {
           success: false,
@@ -143,7 +143,7 @@ export class DSLVisualizer {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown visualization error';
       this.errors = [{ message: errorMessage, severity: 'error' }];
-      this.renderError(errorMessage);
+      this.renderError([{ message: errorMessage, severity: 'error' }]);
 
       return {
         success: false,
@@ -192,10 +192,8 @@ export class DSLVisualizer {
   /**
    * Render error message to SVG
    */
-  private renderError(message: string): void {
-    const errorSvg = this.svgRenderer.renderErrors([
-      { message, severity: 'error' }
-    ]);
+  private renderError(errors: ValidationError[]): void {
+    const errorSvg = this.svgRenderer.renderErrors(errors);
     this.lastSvgString = errorSvg;
 
     if (this.svgContainer) {

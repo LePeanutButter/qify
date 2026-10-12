@@ -711,6 +711,7 @@ export class DSLParser {
       { type: 'COLON', pattern: /:/ },
       { type: 'COMMA', pattern: /,/ },
       { type: 'DOT', pattern: /\./ },
+      { type: 'COMMENT', pattern: /\/\/[^\r\n]*/ },
       { type: 'WHITESPACE', pattern: /\s+/ }
     ];
   }
@@ -734,7 +735,7 @@ export class DSLParser {
 
       return {
         token:
-          type === 'WHITESPACE'
+          type === 'WHITESPACE' || type === 'COMMENT'
             ? null
             : {
                 type,

@@ -229,6 +229,7 @@ export type TokenType =
   | 'COLON'
   | 'COMMA'
   | 'DOT'
+  | 'COMMENT'
   | 'EOF'
   | 'WHITESPACE'
   | 'UNKNOWN';
