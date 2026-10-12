@@ -105,7 +105,7 @@ header {
     position: relative;
     display: inline-block;
     width: 100%;
-    border-left: 3px solid #ff4d4f;
+    box-sizing: border-box;
     background:
         linear-gradient(
             90deg,
@@ -115,6 +115,7 @@ header {
             transparent calc(var(--error-column) * 0.602em)
         );
     border-radius: 2px;
+    box-shadow: inset 3px 0 #ff4d4f;
 }
 .error-line-highlight::after {
     position: absolute;
@@ -302,6 +303,7 @@ button:hover { color: var(--text-main); border-color: rgba(255,255,255,0.08); }
     white-space: pre;
     letter-spacing: inherit;
     margin: 0;
+    transform: none;
 }
 
 .autocomplete-ghost-fill {
@@ -869,10 +871,32 @@ header {
     max-width: 1240px;
     width: 100%;
     margin: 0 auto;
-    grid-template-columns: minmax(420px, 0.86fr) minmax(500px, 1.14fr);
-    gap: 18px;
+    grid-template-columns: var(--editor-width, minmax(500px, 0.86fr)) 8px minmax(560px, 1.14fr);
+    gap: 0;
     padding: 26px 28px 30px;
     background: transparent;
+}
+
+.workspace-divider {
+    width: 8px;
+    height: 100%;
+    cursor: col-resize;
+    border-radius: 8px;
+    background: transparent;
+    transition: background-color 160ms ease;
+    touch-action: none;
+}
+
+.workspace-divider:hover,
+.workspace-divider:focus-visible,
+body.is-resizing-workspace .workspace-divider {
+    background: var(--accent-cyan);
+    outline: none;
+}
+
+body.is-resizing-workspace {
+    cursor: col-resize;
+    user-select: none;
 }
 .left-panel, .right-panel {
     min-width: 0;
@@ -1163,6 +1187,7 @@ html[data-motion="reduced"] *::after {
         gap: 14px;
         height: calc(100dvh - 80px);
     }
+    .workspace-divider { display: none; }
     .left-panel, .right-panel { border-radius: 14px; }
 }
 

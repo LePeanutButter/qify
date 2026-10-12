@@ -47,6 +47,7 @@ function initializeApp(): void {
     
     // 3. Bind global UI actions to the window object for HTML access
     setupGlobalActions();
+    setupWorkspaceResizer();
     
     // 4. Load default example
     editor.loadExample('basic');
@@ -55,6 +56,57 @@ function initializeApp(): void {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to initialize';
     updateStatus(`Error: ${errorMessage}`);
+  }
+
+  function setupWorkspaceResizer(): void {
+    const workspace = document.querySelector<HTMLElement>('.workspace');
+    const divider = document.getElementById('workspaceDivider');
+    if (!workspace || !divider) return;
+
+    let dragging = false;
+    const updateEditorWidth = (clientX: number): void => {
+      const bounds = workspace.getBoundingClientRect();
+      const dividerWidth = divider.getBoundingClientRect().width;
+      const styles = window.getComputedStyle(workspace);
+      const contentLeft = bounds.left + Number.parseFloat(styles.paddingLeft);
+      const contentRight = bounds.right - Number.parseFloat(styles.paddingRight);
+      const minimumEditorWidth = 500;
+      const minimumCanvasWidth = 560;
+      const maximumEditorWidth = contentRight - contentLeft - dividerWidth - minimumCanvasWidth;
+      const editorWidth = Math.max(minimumEditorWidth, Math.min(maximumEditorWidth, clientX - contentLeft));
+      workspace.style.setProperty('--editor-width', `${editorWidth}px`);
+    };
+
+    divider.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      dragging = true;
+      divider.setPointerCapture(event.pointerId);
+      document.body.classList.add('is-resizing-workspace');
+      event.preventDefault();
+    });
+
+    divider.addEventListener('pointermove', (event) => {
+      if (dragging) updateEditorWidth(event.clientX);
+    });
+
+    const stopDragging = (event: PointerEvent): void => {
+      if (!dragging) return;
+      dragging = false;
+      if (divider.hasPointerCapture(event.pointerId)) {
+        divider.releasePointerCapture(event.pointerId);
+      }
+      document.body.classList.remove('is-resizing-workspace');
+    };
+
+    divider.addEventListener('pointerup', stopDragging);
+    divider.addEventListener('pointercancel', stopDragging);
+    divider.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      const bounds = workspace.getBoundingClientRect();
+      const currentWidth = workspace.querySelector<HTMLElement>('.left-panel')?.getBoundingClientRect().width ?? 0;
+      updateEditorWidth(bounds.left + currentWidth + (event.key === 'ArrowRight' ? 24 : -24));
+      event.preventDefault();
+    });
   }
 }
 

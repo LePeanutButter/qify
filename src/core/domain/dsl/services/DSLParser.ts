@@ -178,6 +178,17 @@ export class DSLParser {
    * @returns ASTNode for attribute declaration
    */
   private parseAttributeDeclaration(): ASTNode | null {
+    if (this.check('KEYWORD_ATTRIBUTE') || this.check('KEYWORD_SYSTEM')) {
+      const repeatedKeyword = this.peek();
+      this.addError(
+        `Expected attribute name after 'attribute'; found '${repeatedKeyword.value}'`,
+        repeatedKeyword.position,
+        'error'
+      );
+      this.advance();
+      return null;
+    }
+
     const attributeIdentifier = this.consume('IDENTIFIER', 'Expected attribute name');
     if (!attributeIdentifier) return null;
 

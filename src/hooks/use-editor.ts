@@ -174,35 +174,35 @@ export class EditorManager {
   }
 
   private setCaretPosition(element: HTMLElement, offset: number) {
-    let charIndex = 0;
     const range = document.createRange();
-    range.setStart(element, 0);
-    range.collapse(true);
-    const nodeStack: Node[] = [element];
-    let node: Node | undefined;
-    let foundStart = false;
-    let stop = false;
-
-    while (!stop && (node = nodeStack.pop())) {
-      if (node.nodeType === 3) {
-        const nextCharIndex = charIndex + (node.textContent?.length || 0);
-        if (!foundStart && offset >= charIndex && offset <= nextCharIndex) {
-          range.setStart(node, offset - charIndex);
-          foundStart = true;
-        }
-        if (foundStart && offset >= charIndex && offset <= nextCharIndex) {
-          range.setEnd(node, offset - charIndex);
-          stop = true;
-        }
-        charIndex = nextCharIndex;
-      } else {
-        let i = node.childNodes.length;
-        while (i--) {
-          const child = node.childNodes[i];
-          if (child) nodeStack.push(child);
-        }
-      }
+    const textNodes: Text[] = [];
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let currentNode: Node | null = walker.nextNode();
+    while (currentNode) {
+      textNodes.push(currentNode as Text);
+      currentNode = walker.nextNode();
     }
+
+    let characterIndex = 0;
+    const targetNode = textNodes.find((node) => {
+      const nextIndex = characterIndex + (node.textContent?.length || 0);
+      const isTarget = offset < nextIndex || (offset === 0 && characterIndex === 0);
+      if (!isTarget) characterIndex = nextIndex;
+      return isTarget;
+    });
+
+    if (targetNode) {
+      range.setStart(targetNode, Math.max(0, offset - characterIndex));
+    } else {
+      const lastNode = textNodes.at(-1);
+      if (!lastNode) {
+        range.setStart(element, 0);
+        range.collapse(true);
+        return;
+      }
+      range.setStart(lastNode, lastNode.textContent?.length || 0);
+    }
+    range.collapse(true);
 
     const sel = window.getSelection();
     if (sel) {
@@ -223,7 +223,25 @@ export class EditorManager {
     let text = this.codeElement.textContent || '';
 
     // Save cursor position
-    const caretPos = overrideCaretPos !== -1 ? overrideCaretPos : (initial ? 0 : this.getCaretPosition(this.codeElement));
+    let caretPos = overrideCaretPos !== -1 ? overrideCaretPos : (initial ? 0 : this.getCaretPosition(this.codeElement));
+
+    const lines = text.split('\n');
+    let normalized = false;
+    let normalizedOffset = -1;
+    lines.forEach((line, index) => {
+      const duplicateMatch = /^([ \t]*)attribute(?:[ \t]+)?attribute(?=[ \t{]|$)/.exec(line);
+      if (!duplicateMatch) return;
+      const indentation = duplicateMatch[1] ?? '';
+      const lineOffset = lines.slice(0, index).reduce((total, value) => total + value.length + 1, 0);
+      normalizedOffset = lineOffset + indentation.length + 'attribute'.length;
+      lines[index] = `${indentation}attribute\n${indentation}${line.slice(duplicateMatch[0].length)}`;
+      normalized = true;
+    });
+    if (normalized) {
+      if (caretPos >= normalizedOffset) caretPos += 1;
+      text = lines.join('\n');
+      this.codeElement.textContent = text;
+    }
 
     if (!this.isUndoRedo && !initial) {
       this.saveHistory(text, caretPos);
@@ -389,6 +407,21 @@ export class EditorManager {
    */
   private handleKeyDown(e: KeyboardEvent): void {
     if (!this.codeElement) return;
+
+    if (e.key.toLowerCase() === 'a' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const text = this.codeElement.textContent || '';
+      const caretPos = this.getCaretPosition(this.codeElement);
+      const lineStart = text.lastIndexOf('\n', caretPos - 1) + 1;
+      const linePrefix = text.slice(lineStart, caretPos);
+      const nextText = text.slice(caretPos);
+      if (!linePrefix.trim() && /^attribute\b/.test(nextText)) {
+        e.preventDefault();
+        const nextValue = `${text.slice(0, caretPos)}a\n${nextText}`;
+        this.codeElement.textContent = nextValue;
+        this.handleCodeInput(false, caretPos + 1, true);
+        return;
+      }
+    }
 
     if (e.ctrlKey || e.metaKey) {
       if (e.key.toLowerCase() === 'z') {
@@ -805,6 +838,23 @@ export class EditorManager {
     target.style.whiteSpace = 'pre';
     target.style.margin = '0';
     target.style.padding = '0';
+
+    if (this.autocompleteBackdrop) {
+      const backdrop = this.autocompleteBackdrop;
+      backdrop.style.fontFamily = computed.fontFamily;
+      backdrop.style.fontSize = computed.fontSize;
+      backdrop.style.fontWeight = computed.fontWeight;
+      backdrop.style.fontStyle = computed.fontStyle;
+      backdrop.style.lineHeight = computed.lineHeight;
+      backdrop.style.letterSpacing = computed.letterSpacing;
+      backdrop.style.tabSize = computed.tabSize;
+      backdrop.style.whiteSpace = 'pre';
+      backdrop.style.margin = '0';
+      backdrop.style.paddingTop = computed.paddingTop;
+      backdrop.style.paddingRight = computed.paddingRight;
+      backdrop.style.paddingBottom = computed.paddingBottom;
+      backdrop.style.paddingLeft = computed.paddingLeft;
+    }
   }
 
   private applyAutocompleteSuggestion(index?: number): void {
